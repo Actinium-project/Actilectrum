@@ -7,7 +7,7 @@ import sys, os
 PACKAGE='Actilectrum'
 PYPKG='actilectrum'
 MAIN_SCRIPT='run_actilectrum'
-ICONS_FILE='electrum.icns'
+ICONS_FILE='actilectrum.icns'
 APP_SIGN = os.environ.get('APP_SIGN', '')
 
 def fail(*msg):
