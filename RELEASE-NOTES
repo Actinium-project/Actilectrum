@@ -106,7 +106,7 @@
  * The partial transaction format has been incompatibly changed. This
    was needed as for partial transactions the scriptSig/witness has to
    be parsed, but for signed transactions we did not want to do the
-   parsing.  Users should make sure that all instances of Electrum
+   parsing.  Users should make sure that all instances of Actilectrum
    they use to co-sign or offline sign, are updated together.
  * Signing of partial transactions created with online imported
    addresses wallets now supports significantly more
@@ -188,7 +188,7 @@
    estimates from Bitcoin Core are still available. Note that miners
    could exploit this feature, if they conspired and filled the memory
    pool with expensive transactions that never get mined. However,
-   since the Electrum client already trusts an Electrum server with
+   since the Actilectrum client already trusts an Actilectrum server with
    fee estimates, activating this feature does not introduce any new
    vulnerability. In addition, the client uses a hard threshold to
    protect itself from servers sending excessive fee estimates. In
@@ -247,9 +247,9 @@
    More details and exact version bytes are specified at:
    https://github.com/spesmilo/electrum-docs/blob/master/xpub_version_bytes.rst
    Note that due to this change, testnet wallet files created with previous
-   versions of Electrum must be considered broken, and they need to be
+   versions of Actilectrum must be considered broken, and they need to be
    recreated from seed words.
- * A new version of the Electrum protocol is required by the client
+ * A new version of the Actilectrum protocol is required by the client
    (version 1.2). Servers using older versions of the protocol will
    not be displayed in the GUI.
 
@@ -270,7 +270,7 @@ issue #3374. Users should upgrade to 3.0.5.
 # Release 3.0.4 : (Security update)
 
  * Fix a vulnerability caused by Cross-Origin Resource Sharing (CORS)
-   in the JSONRPC interface. Previous versions of Electrum are
+   in the JSONRPC interface. Previous versions of Actilectrum are
    vulnerable to port scanning and deanonimization attacks from
    malicious websites. Wallets that are not password-protected are
    vulnerable to theft.
@@ -280,7 +280,7 @@ issue #3374. Users should upgrade to 3.0.5.
 # Release 3.0.3
   * Qt GUI: sweeping now uses the Send tab, allowing fees to be set
   * Windows: if using the installer binary, there is now a separate shortcut
-    for "Electrum Testnet"
+    for "Actilectrum Testnet"
   * Digital Bitbox: added support for p2sh-segwit
   * OS notifications for incoming transactions
   * better transaction size estimation:
@@ -327,7 +327,7 @@ issue #3374. Users should upgrade to 3.0.5.
       ends up being rejected or substantially modified, your wallet
       may have to be restored from seed. This will not affect funds
       sent to bech32 addresses, and it will not affect the capacity of
-      Electrum to spend these funds.
+      Actilectrum to spend these funds.
 
     - Segwit scripts embedded in p2sh are supported with hardware
       wallets or bip39 seeds. To create a segwit-in-p2sh wallet,
@@ -361,7 +361,7 @@ issue #3374. Users should upgrade to 3.0.5.
       it is not possible to import a p2sh private key and associate it
       to a p2pkh address.
 
-  * A new version of the Electrum protocol is required by the client
+  * A new version of the Actilectrum protocol is required by the client
     (version 1.1). Servers using older versions of the protocol will
     not be displayed in the GUI.
 
@@ -385,7 +385,7 @@ issue #3374. Users should upgrade to 3.0.5.
   * command-line option for locktime
 
 # Release 2.9 - Independence (July 27th, 2017)
-  * Multiple Chain Validation: Electrum will download and validate
+  * Multiple Chain Validation: Actilectrum will download and validate
     block headers sent by servers that may follow different branches
     of a fork in the Bitcoin blockchain. Instead of a linear sequence,
     block headers are organized in a tree structure. Branching points
@@ -513,8 +513,8 @@ issue #3374. Users should upgrade to 3.0.5.
 
 # Release 2.7.6
  * Fixes a critical bug with imported private keys (issue #1966). Keys
-   imported in Electrum 2.7.x were not encrypted, even if the wallet
-   had a password. If you imported private keys using Electrum 2.7.x,
+   imported in Actilectrum 2.7.x were not encrypted, even if the wallet
+   had a password. If you imported private keys using Actilectrum 2.7.x,
    you will need to import those keys again. If you imported keys in
    2.6 and converted with 2.7.x, you don't need to do anything, but
    you still need to upgrade in order to be able to spend.
@@ -552,10 +552,10 @@ issue #3374. Users should upgrade to 3.0.5.
  * The wallet file format has been upgraded. This upgrade is not
    backward compatible, which means that a wallet upgraded to the 2.7
    format will not be readable by earlier versions of
-   Electrum. Multiple accounts inside the same wallet are not
+   Actilectrum. Multiple accounts inside the same wallet are not
    supported in the new format; the Qt GUI will propose to split any
    wallet that has several accounts. Make sure that you have saved
-   your seed phrase before you upgrade Electrum.
+   your seed phrase before you upgrade Actilectrum.
  * This version introduces a separation between wallets types and
    keystores types. 'Wallet type' defines the type of Bitcoin contract
    used in the wallet, while 'keystore type' refers to the method used
@@ -665,8 +665,8 @@ issue #3374. Users should upgrade to 3.0.5.
  * Low-S values are used in signatures (BIP 62).
  * The Kivy GUI has been merged into master.
  * The Qt GUI supports multiple windows in the same process. When a
-   new Electrum instance is started, it checks for an already running
-   Electrum process, and connects to it.
+   new Actilectrum instance is started, it checks for an already running
+   Actilectrum process, and connects to it.
  * The network layer uses select(), so all server communication is
    handled by a single thread. Moreover, the synchronizer, verifier,
    and exchange rate plugin now run as separate jobs within the
@@ -699,7 +699,7 @@ issue #3374. Users should upgrade to 3.0.5.
    uses DNSSEC.
  * The DNSSEC verification code was rewritten. The previous code,
    which was part of the OpenAlias plugin, is vulnerable and should
-   not be trusted (Electrum 2.0 to 2.3).
+   not be trusted (Actilectrum 2.0 to 2.3).
  * Payment requests can be signed using Bitcoin addresses stored
    in DNS (OpenAlias). The identity of the requestor is verified using
    DNSSEC.
@@ -837,7 +837,7 @@ issue #3374. Users should upgrade to 3.0.5.
    phrase includes a version number, that refers to the wallet
    structure. The version number also serves as a checksum, and it
    will prevent the import of seeds from incompatible wallets. Old
-   Electrum seeds are still supported.
+   Actilectrum seeds are still supported.
 
  * New address derivation (BIP32). Standard wallets are single account
    and use a gap limit of 20.
@@ -878,7 +878,7 @@ issue #3374. Users should upgrade to 3.0.5.
  * The 'Send' tab in the Qt GUI supports transactions with multiple
    outputs, and raw hexadecimal scripts.
 
- * The GUI can connect to the Electrum daemon: "electrum -d" will
+ * The GUI can connect to the Actilectrum daemon: "electrum -d" will
    start the daemon if it is not already running, and the GUI will
    connect to it. The daemon can serve several clients. It times out
    if no client uses if for more than 5 minutes.
@@ -888,7 +888,7 @@ issue #3374. Users should upgrade to 3.0.5.
    addresses in the wizard dialog.
 
  * New file format: Wallets files are saved as JSON. Note that new
-   wallet files cannot be read by older versions of Electrum. Old
+   wallet files cannot be read by older versions of Actilectrum. Old
    wallet files will be converted to the new format; this operation
    may take some time, because public keys will be derived for each
    address of your wallet.
@@ -908,7 +908,7 @@ issue #3374. Users should upgrade to 3.0.5.
 
 # Release 1.9.8
 
-* Electrum servers were upgraded to version 0.9. The new server stores
+* Actilectrum servers were upgraded to version 0.9. The new server stores
   a Patrica tree of all UTXOs, an idea proposed by Alan Reiner in the
   bitcointalk forum. This property allows the client to directly
   request the balance of any address. The new commands are:
@@ -1016,15 +1016,15 @@ bugfixes: connection problems, transactions staying unverified
 # Release 1.7
 
 * The Classic GUI can be extended with plugins. Developers who want to
-add new features or third-party services to Electrum are invited to
+add new features or third-party services to Actilectrum are invited to
 write plugins. Some previously existing and non-essential features of
-Electrum (point-of-sale mode, qrcode scanner) were removed from the
+Actilectrum (point-of-sale mode, qrcode scanner) were removed from the
 core and are now available as plugins.
 
 * The wallet waits for 2 confirmations before creating new
 addresses. This makes recovery from seed more robust. Note that it
-might create unwanted gaps if you use Electrum 1.7 together with older
-versions of Electrum.
+might create unwanted gaps if you use Actilectrum 1.7 together with older
+versions of Actilectrum.
 
 * An interactive Python console replaces the 'Wall' tab. The provided
 python environment gives users access to the wallet and gui. Most
@@ -1032,7 +1032,7 @@ electrum commands are available as python function in the
 console. Custom scripts an be loaded with a "run(filename)"
 command. Tab-completions are available.
 
-* The location of the Electrum folder in Windows changed from
+* The location of the Actilectrum folder in Windows changed from
 LOCALAPPDATA to APPDATA. Discussion on this topic can be found here:
 https://bitcointalk.org/index.php?topic=144575.0
 

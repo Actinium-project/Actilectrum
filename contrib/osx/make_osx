@@ -4,7 +4,7 @@
 PYTHON_VERSION=3.6.4
 BUILDDIR=/tmp/actilectrum-build
 PACKAGE=Actilectrum
-GIT_REPO=https://github.com/pooler/actilectrum
+GIT_REPO=https://github.com/Actinium-project/actilectrum
 LIBSECP_VERSION=452d8e4d2a2f9f1b5be6b02e18f1ba102e5ca0b4
 
 . $(dirname "$0")/base.sh

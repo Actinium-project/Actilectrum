@@ -1,4 +1,4 @@
-# If you want Electrum to appear in a Linux app launcher ("start menu"), install this by doing:
+# If you want Actilectrum to appear in a Linux app launcher ("start menu"), install this by doing:
 # sudo desktop-file-install actilectrum.desktop
 
 [Desktop Entry]
@@ -7,8 +7,8 @@ Exec=sh -c "PATH=\"\\$HOME/.local/bin:\\$PATH\"; actilectrum %u"
 GenericName[en_US]=Actinium Wallet
 GenericName=Actinium Wallet
 Icon=actilectrum
-Name[en_US]=Electrum Actinium Wallet
-Name=Electrum Actinium Wallet
+Name[en_US]=Actilectrum Actinium Wallet
+Name=Actilectrum Actinium Wallet
 Categories=Finance;Network;
 StartupNotify=true
 StartupWMClass=actilectrum

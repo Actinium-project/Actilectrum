@@ -1,5 +1,5 @@
-# Electrum - lightweight Bitcoin client
-# Copyright (C) 2018 The Electrum Developers
+# Actilectrum - lightweight Bitcoin client
+# Copyright (C) 2018 The Actilectrum Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files

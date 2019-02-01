@@ -3,8 +3,8 @@
 
 ## Just the glue please
 
-This code connects the public USB API and Electrum. Leverages all
-the good work that's been done by the Electrum team to support
+This code connects the public USB API and Actilectrum. Leverages all
+the good work that's been done by the Actilectrum team to support
 hardware wallets.
 
 ## Background
@@ -23,8 +23,8 @@ this point, the PSBT files generated will only be compatible with
 Coldcard.
 
 The Coldcard can be used 100% offline: it can generate a skeleton
-Electrum wallet and save it to MicroSD card. Transport that file
-to Electrum and it will fetch history, blockchain details and then
+Actilectrum wallet and save it to MicroSD card. Transport that file
+to Actilectrum and it will fetch history, blockchain details and then
 operate in "unpaired" mode.
 
 Spending transactions can be saved to MicroSD using the "Export PSBT"
@@ -32,7 +32,7 @@ button on the transaction preview dialog (when this plugin is
 owner of the wallet). That PSBT can be signed on the Coldcard
 (again using MicroSD both ways). The result is a ready-to-transmit
 bitcoin transaction, which can be transmitted using Tools > Load
-Transaction > From File in Electrum or really any tool.
+Transaction > From File in Actilectrum or really any tool.
 
 <https://coldcardwallet.com>
 

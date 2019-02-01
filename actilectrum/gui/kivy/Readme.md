@@ -1,6 +1,6 @@
 # Kivy GUI
 
-The Kivy GUI is used with Electrum on Android devices.
+The Kivy GUI is used with Actilectrum on Android devices.
 To generate an APK file, follow these instructions.
 
 ## Android binary with Docker
@@ -58,7 +58,7 @@ You probably need to clear the cache: `rm -rf .buildozer/android/platform/build/
 ### How do I deploy on connected phone for quick testing?
 Assuming `adb` is installed:
 ```
-$ adb -d install -r bin/Electrum-*-debug.apk
+$ adb -d install -r bin/Actilectrum-*-debug.apk
 $ adb shell monkey -p org.electrum.electrum 1
 ```
 

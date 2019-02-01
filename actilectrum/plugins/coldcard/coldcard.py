@@ -1,5 +1,5 @@
 #
-# Coldcard Electrum plugin main code.
+# Coldcard Actilectrum plugin main code.
 #
 #
 from struct import pack, unpack
@@ -39,7 +39,7 @@ try:
         # avoid use of pycoin for MiTM message signature test
         def mitm_verify(self, sig, expect_xpub):
             # verify a signature (65 bytes) over the session key, using the master bip32 node
-            # - customized to use specific EC library of Electrum.
+            # - customized to use specific EC library of Actilectrum.
             from actilectrum.ecc import ECPubkey
 
             xtype, depth, parent_fingerprint, child_number, chain_code, K_or_k \
@@ -202,7 +202,7 @@ class CKCCClient:
     def ping_check(self):
         # check connection is working
         assert self.dev.session_key, 'not encrypted?'
-        req = b'1234 Electrum Plugin 4321'      # free up to 59 bytes
+        req = b'1234 Actilectrum Plugin 4321'      # free up to 59 bytes
         try:
             echo = self.dev.send_recv(CCProtocolPacker.ping(req))
             assert echo == req
@@ -564,7 +564,7 @@ class Coldcard_KeyStore(Hardware_KeyStore):
 
     @staticmethod
     def _encode_txin_type(txin_type):
-        # Map from Electrum code names to our code numbers.
+        # Map from Actilectrum code names to our code numbers.
         return {'standard': AF_CLASSIC, 'p2pkh': AF_CLASSIC,
                 'p2sh': AF_P2SH,
                 'p2wpkh-p2sh': AF_P2WPKH_P2SH,

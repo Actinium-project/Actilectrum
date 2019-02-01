@@ -1,4 +1,4 @@
-# Electrum - lightweight Bitcoin client
+# Actilectrum - lightweight Bitcoin client
 # Copyright (C) 2011 Thomas Voegtlin
 #
 # Permission is hereby granted, free of charge, to any person
@@ -393,7 +393,7 @@ def assert_datadir_available(config_path):
         return
     else:
         raise FileNotFoundError(
-            'Electrum datadir does not exist. Was it deleted while running?' + '\n' +
+            'Actilectrum datadir does not exist. Was it deleted while running?' + '\n' +
             'Should be at {}'.format(path))
 
 
@@ -870,7 +870,7 @@ class TxMinedInfo(NamedTuple):
 
 def make_aiohttp_session(proxy: dict, headers=None, timeout=None):
     if headers is None:
-        headers = {'User-Agent': 'Electrum'}
+        headers = {'User-Agent': 'Actilectrum'}
     if timeout is None:
         timeout = aiohttp.ClientTimeout(total=10)
     ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_path)

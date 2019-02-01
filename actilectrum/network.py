@@ -1,4 +1,4 @@
-# Electrum - Lightweight Bitcoin Client
+# Actilectrum - Lightweight Bitcoin Client
 # Copyright (c) 2011-2016 Thomas Voegtlin
 #
 # Permission is hereby granted, free of charge, to any person
@@ -176,7 +176,7 @@ class TxBroadcastHashMismatch(TxBroadcastError):
     def get_message_for_gui(self):
         return "{}\n{}\n\n{}" \
             .format(_("The server returned an unexpected transaction ID when broadcasting the transaction."),
-                    _("Consider trying to connect to a different server, or updating Electrum."),
+                    _("Consider trying to connect to a different server, or updating Actilectrum."),
                     str(self))
 
 
@@ -184,7 +184,7 @@ class TxBroadcastServerReturnedError(TxBroadcastError):
     def get_message_for_gui(self):
         return "{}\n{}\n\n{}" \
             .format(_("The server returned an error when broadcasting the transaction."),
-                    _("Consider trying to connect to a different server, or updating Electrum."),
+                    _("Consider trying to connect to a different server, or updating Actilectrum."),
                     str(self))
 
 
@@ -773,7 +773,7 @@ class Network(PrintError):
 
     @staticmethod
     def sanitize_tx_broadcast_response(server_msg) -> str:
-        # Unfortunately, bitcoind and hence the Electrum protocol doesn't return a useful error code.
+        # Unfortunately, bitcoind and hence the Actilectrum protocol doesn't return a useful error code.
         # So, we use substring matching to grok the error message.
         # server_msg is untrusted input so it should not be shown to the user. see #4968
         server_msg = str(server_msg)

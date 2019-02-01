@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 # scrypt.py - basic implementation of Actinium's proof-of-work algorithm
-# Copyright (C) 2014, 2017 pooler@litecoinpool.org
+# Copyright (C) 2014, 2017 Actinium-project@litecoinpool.org
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

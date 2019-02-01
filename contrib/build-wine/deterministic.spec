@@ -46,7 +46,7 @@ datas += collect_data_files('keepkeylib')
 datas += collect_data_files('ckcc')
 
 # We don't put these files in to actually include them in the script but to make the Analysis method scan them for imports
-a = Analysis([home+'run_electrum',
+a = Analysis([home+'run_actilectrum',
               home+'actilectrum/gui/qt/main_window.py',
               home+'actilectrum/gui/text.py',
               home+'actilectrum/util.py',
@@ -117,7 +117,7 @@ exe_standalone = EXE(
     upx=False,
     icon=home+'icons/electrum.ico',
     console=False)
-    # console=True makes an annoying black box pop up, but it does make Electrum output command line commands, with this turned off no output will be given but commands can still be used
+    # console=True makes an annoying black box pop up, but it does make Actilectrum output command line commands, with this turned off no output will be given but commands can still be used
 
 exe_portable = EXE(
     pyz,

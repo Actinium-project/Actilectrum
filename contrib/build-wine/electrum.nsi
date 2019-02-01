@@ -7,8 +7,8 @@
 ;Variables
 
   !define PRODUCT_NAME "Actilectrum"
-  !define PRODUCT_WEB_SITE "https://github.com/pooler/actilectrum"
-  !define PRODUCT_PUBLISHER "Electrum Technologies GmbH"
+  !define PRODUCT_WEB_SITE "https://github.com/Actinium-project/actilectrum"
+  !define PRODUCT_PUBLISHER "Actilectrum Technologies GmbH"
   !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 
 ;--------------------------------
@@ -132,7 +132,7 @@ Section
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME} Testnet.lnk" "$INSTDIR\actilectrum-${PRODUCT_VERSION}.exe" "--testnet" "$INSTDIR\actilectrum-${PRODUCT_VERSION}.exe" 0
 
 
-  ;Links bitcoin: URI's to Electrum
+  ;Links bitcoin: URI's to Actilectrum
   WriteRegStr HKCU "Software\Classes\actinium" "" "URL:actinium Protocol"
   WriteRegStr HKCU "Software\Classes\actinium" "URL Protocol" ""
   WriteRegStr HKCU "Software\Classes\actinium" "DefaultIcon" "$\"$INSTDIR\electrum.ico, 0$\""

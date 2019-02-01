@@ -1,7 +1,7 @@
 Actilectrum - Lightweight Actinium client
 ==========================================
 
-Actilectrum is a port of Electrum, the Bitcoin wallet, to Actinium.
+Actilectrum is a port of Actilectrum, the Bitcoin wallet, to Actinium.
 
 ::
 
@@ -29,7 +29,7 @@ Actilectrum from its root directory without installing it on your
 system; all the python dependencies are included in the 'packages'
 directory. To run Actilectrum from its root directory, just do::
 
-    ./run_electrum
+    ./run_actilectrum
 
 You can also install Actilectrum on your system, by running this command::
 
@@ -52,7 +52,7 @@ Development version
 
 Check out the code from GitHub::
 
-    git clone git://github.com/pooler/actilectrum.git
+    git clone git://github.com/Actinium-project/actilectrum.git
     cd actilectrum
 
 Run install (this should install dependencies)::

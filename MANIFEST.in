@@ -2,7 +2,7 @@ include LICENCE RELEASE-NOTES AUTHORS
 include README.rst
 include actilectrum.desktop
 include *.py
-include run_electrum
+include run_actilectrum
 include contrib/requirements/requirements.txt
 include contrib/requirements/requirements-hw.txt
 recursive-include packages *.py

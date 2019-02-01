@@ -123,7 +123,7 @@ download_if_not_exist $ZBAR_FILENAME "$ZBAR_URL"
 verify_hash $ZBAR_FILENAME "$ZBAR_SHA256"
 wine "$PWD/$ZBAR_FILENAME" /S
 
-# Upgrade setuptools (so Electrum can be installed later)
+# Upgrade setuptools (so Actilectrum can be installed later)
 $PYTHON -m pip install setuptools --upgrade
 
 # Install NSIS installer

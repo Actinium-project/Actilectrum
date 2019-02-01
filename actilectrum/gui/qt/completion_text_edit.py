@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
-# Copyright (C) 2018 The Electrum developers
+# Actilectrum - lightweight Bitcoin client
+# Copyright (C) 2018 The Actilectrum developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files

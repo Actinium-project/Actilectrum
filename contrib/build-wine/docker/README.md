@@ -35,7 +35,7 @@ folder.
         rm -rf $FRESH_CLONE && \
         mkdir -p $FRESH_CLONE && \
         cd $FRESH_CLONE  && \
-        git clone https://github.com/pooler/actilectrum.git && \
+        git clone https://github.com/Actinium-project/actilectrum.git && \
         cd actilectrum
     ```
 
