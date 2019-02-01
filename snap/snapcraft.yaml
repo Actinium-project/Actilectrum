@@ -1,23 +1,23 @@
-name: electrum-ltc
+name: actilectrum
 version: master
-summary: Litecoin thin client
+summary: Actinium thin client
 description: |
-  Lightweight Litecoin client
+  Lightweight Actinium client
 
 grade: devel # must be 'stable' to release into candidate/stable channels
 confinement: strict
 
 apps:
-  electrum-ltc:
-    command: desktop-launch electrum-ltc
+  actilectrum:
+    command: desktop-launch actilectrum
     plugs: [network, network-bind, x11, unity7]
 
 parts:
-  electrum-ltc:
+  actilectrum:
     source: .
     plugin: python
     python-version: python3
     stage-packages: [python3-pyqt5]
     build-packages: [pyqt5-dev-tools]
-    install: pyrcc5 icons.qrc -o $SNAPCRAFT_PART_INSTALL/lib/python3.5/site-packages/electrum_ltc/gui/qt/icons_rc.py
+    install: pyrcc5 icons.qrc -o $SNAPCRAFT_PART_INSTALL/lib/python3.5/site-packages/actilectrum/gui/qt/icons_rc.py
     after: [desktop-qt5]

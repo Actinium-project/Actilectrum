@@ -23,17 +23,17 @@ string = string.replace("##VERSION_ANDROID##", version_android)
 string = string.replace("##VERSION_APK##", APK_VERSION)
 
 files = {
-    'tgz': "Electrum-LTC-%s.tar.gz" % version,
-    'zip': "Electrum-LTC-%s.zip" % version,
-    'mac': "electrum-ltc-%s.dmg" % version_mac,
-    'win': "electrum-ltc-%s.exe" % version_win,
-    'win_setup': "electrum-ltc-%s-setup.exe" % version_win,
-    'win_portable': "electrum-ltc-%s-portable.exe" % version_win,
+    'tgz': "Actilectrum-%s.tar.gz" % version,
+    'zip': "Actilectrum-%s.zip" % version,
+    'mac': "actilectrum-%s.dmg" % version_mac,
+    'win': "actilectrum-%s.exe" % version_win,
+    'win_setup': "actilectrum-%s-setup.exe" % version_win,
+    'win_portable': "actilectrum-%s-portable.exe" % version_win,
 }
 
 for k, n in files.items():
     path = "dist/%s"%n
-    link = "https://download.electrum-ltc.org/%s"%n
+    link = "https://download.actilectrum.org/%s"%n
     if not os.path.exists(path):
         os.system("wget -q %s -O %s" % (link, path))
     if not os.path.getsize(path):

@@ -20,7 +20,7 @@ folder.
 2. Build image
 
     ```
-    $ sudo docker build --no-cache -t electrum-ltc-wine-builder-img contrib/build-wine/docker
+    $ sudo docker build --no-cache -t actilectrum-wine-builder-img contrib/build-wine/docker
     ```
 
     Note: see [this](https://stackoverflow.com/a/40516974/7499128) if having dns problems
@@ -35,19 +35,19 @@ folder.
         rm -rf $FRESH_CLONE && \
         mkdir -p $FRESH_CLONE && \
         cd $FRESH_CLONE  && \
-        git clone https://github.com/pooler/electrum-ltc.git && \
-        cd electrum-ltc
+        git clone https://github.com/pooler/actilectrum.git && \
+        cd actilectrum
     ```
 
     And then build from this directory:
     ```
     $ git checkout $REV
     $ sudo docker run -it \
-        --name electrum-ltc-wine-builder-cont \
-        -v $PWD:/opt/wine64/drive_c/electrum-ltc \
+        --name actilectrum-wine-builder-cont \
+        -v $PWD:/opt/wine64/drive_c/actilectrum \
         --rm \
-        --workdir /opt/wine64/drive_c/electrum-ltc/contrib/build-wine \
-        electrum-ltc-wine-builder-img \
+        --workdir /opt/wine64/drive_c/actilectrum/contrib/build-wine \
+        actilectrum-wine-builder-img \
         ./build.sh
     ```
 4. The generated binaries are in `./contrib/build-wine/dist`.
@@ -60,10 +60,10 @@ Note: the `setup` binary (NSIS installer) is not deterministic yet.
 Code Signing
 ============
 
-Electrum-LTC Windows builds are signed with a Microsoft Authenticode™ code signing
+Actilectrum Windows builds are signed with a Microsoft Authenticode™ code signing
 certificate in addition to the GPG-based signatures.
 
-The advantage of using Authenticode is that Electrum-LTC users won't receive a 
+The advantage of using Authenticode is that Actilectrum users won't receive a 
 Windows SmartScreen warning when starting it.
 
 The release signing procedure involves a signer (the holder of the
@@ -81,7 +81,7 @@ certificate/key) and one or multiple trusted verifiers:
 
 | Signer and verifiers:                                                                         |
 |-----------------------------------------------------------------------------------------------|
-| Upload signatures to 'electrum-ltc-signatures' repo, as `$version/$filename.$builder.asc`         |
+| Upload signatures to 'actilectrum-signatures' repo, as `$version/$filename.$builder.asc`         |
 
 
 

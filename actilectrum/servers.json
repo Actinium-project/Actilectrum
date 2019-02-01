@@ -1,0 +1,14 @@
+{
+    "electrum1.actinium.org": {
+        "pruning": "-",
+        "s": "50002",
+        "t": "50001",
+        "version": "1.1"
+    },
+    "electrum2.actinium.org": {
+        "pruning": "-",
+        "s": "50002",
+        "t": "50001",
+        "version": "1.1"
+    }
+}

@@ -1,7 +1,7 @@
 Windows Binary Builds
 =====================
 
-These scripts can be used for cross-compilation of Windows Electrum-LTC executables from Linux/Wine.
+These scripts can be used for cross-compilation of Windows Actilectrum executables from Linux/Wine.
 
 For reproducible builds, see the `docker` folder.
 
@@ -30,7 +30,7 @@ $ sudo apt-get install mingw-w64 autotools-dev autoconf libtool
 ```
 
 The binaries are also built by Travis CI, so if you are having problems,
-[that script](https://github.com/pooler/electrum-ltc/blob/master/.travis.yml) might help.
+[that script](https://github.com/pooler/actilectrum/blob/master/.travis.yml) might help.
 
 2. Make sure `/opt` is writable by the current user.
 3. Run `build.sh`.

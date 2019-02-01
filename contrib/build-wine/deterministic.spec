@@ -12,7 +12,7 @@ else:
 
 PYHOME = 'c:/python3'
 
-home = 'C:\\electrum-ltc\\'
+home = 'C:\\actilectrum\\'
 
 # see https://github.com/pyinstaller/pyinstaller/issues/2005
 hiddenimports = []
@@ -33,10 +33,10 @@ binaries += [b for b in collect_dynamic_libs('PyQt5') if 'qwindowsvista' in b[0]
 binaries += [('C:/tmp/libsecp256k1.dll', '.')]
 
 datas = [
-    (home+'electrum_ltc/*.json', 'electrum_ltc'),
-    (home+'electrum_ltc/wordlist/english.txt', 'electrum_ltc/wordlist'),
-    (home+'electrum_ltc/locale', 'electrum_ltc/locale'),
-    (home+'electrum_ltc/plugins', 'electrum_ltc/plugins'),
+    (home+'actilectrum/*.json', 'actilectrum'),
+    (home+'actilectrum/wordlist/english.txt', 'actilectrum/wordlist'),
+    (home+'actilectrum/locale', 'actilectrum/locale'),
+    (home+'actilectrum/plugins', 'actilectrum/plugins'),
     ('C:\\Program Files (x86)\\ZBar\\bin\\', '.'),
 ]
 datas += collect_data_files('trezorlib')
@@ -47,23 +47,23 @@ datas += collect_data_files('ckcc')
 
 # We don't put these files in to actually include them in the script but to make the Analysis method scan them for imports
 a = Analysis([home+'run_electrum',
-              home+'electrum_ltc/gui/qt/main_window.py',
-              home+'electrum_ltc/gui/text.py',
-              home+'electrum_ltc/util.py',
-              home+'electrum_ltc/wallet.py',
-              home+'electrum_ltc/simple_config.py',
-              home+'electrum_ltc/bitcoin.py',
-              home+'electrum_ltc/blockchain.py',
-              home+'electrum_ltc/dnssec.py',
-              home+'electrum_ltc/commands.py',
-              home+'electrum_ltc/plugins/cosigner_pool/qt.py',
-              home+'electrum_ltc/plugins/email_requests/qt.py',
-              home+'electrum_ltc/plugins/trezor/qt.py',
-              home+'electrum_ltc/plugins/safe_t/client.py',
-              home+'electrum_ltc/plugins/safe_t/qt.py',
-              home+'electrum_ltc/plugins/keepkey/qt.py',
-              home+'electrum_ltc/plugins/ledger/qt.py',
-              home+'electrum_ltc/plugins/coldcard/qt.py',
+              home+'actilectrum/gui/qt/main_window.py',
+              home+'actilectrum/gui/text.py',
+              home+'actilectrum/util.py',
+              home+'actilectrum/wallet.py',
+              home+'actilectrum/simple_config.py',
+              home+'actilectrum/bitcoin.py',
+              home+'actilectrum/blockchain.py',
+              home+'actilectrum/dnssec.py',
+              home+'actilectrum/commands.py',
+              home+'actilectrum/plugins/cosigner_pool/qt.py',
+              home+'actilectrum/plugins/email_requests/qt.py',
+              home+'actilectrum/plugins/trezor/qt.py',
+              home+'actilectrum/plugins/safe_t/client.py',
+              home+'actilectrum/plugins/safe_t/qt.py',
+              home+'actilectrum/plugins/keepkey/qt.py',
+              home+'actilectrum/plugins/ledger/qt.py',
+              home+'actilectrum/plugins/coldcard/qt.py',
               #home+'packages/requests/utils.py'
               ],
              binaries=binaries,
@@ -111,7 +111,7 @@ exe_standalone = EXE(
     a.scripts,
     a.binaries,
     a.datas,
-    name=os.path.join('build\\pyi.win32\\electrum-ltc', cmdline_name + ".exe"),
+    name=os.path.join('build\\pyi.win32\\actilectrum', cmdline_name + ".exe"),
     debug=False,
     strip=None,
     upx=False,
@@ -124,7 +124,7 @@ exe_portable = EXE(
     a.scripts,
     a.binaries,
     a.datas + [ ('is_portable', 'README.md', 'DATA' ) ],
-    name=os.path.join('build\\pyi.win32\\electrum-ltc', cmdline_name + "-portable.exe"),
+    name=os.path.join('build\\pyi.win32\\actilectrum', cmdline_name + "-portable.exe"),
     debug=False,
     strip=None,
     upx=False,
@@ -138,7 +138,7 @@ exe_dependent = EXE(
     pyz,
     a.scripts,
     exclude_binaries=True,
-    name=os.path.join('build\\pyi.win32\\electrum-ltc', cmdline_name),
+    name=os.path.join('build\\pyi.win32\\actilectrum', cmdline_name),
     debug=False,
     strip=None,
     upx=False,
@@ -155,4 +155,4 @@ coll = COLLECT(
     debug=False,
     icon=home+'icons/electrum.ico',
     console=False,
-    name=os.path.join('dist', 'electrum-ltc'))
+    name=os.path.join('dist', 'actilectrum'))

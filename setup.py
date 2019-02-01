@@ -26,7 +26,7 @@ with open('contrib/requirements/requirements-hw.txt') as f:
     requirements_hw = f.read().splitlines()
 
 # load version.py; needlessly complicated alternative to "imp.load_source":
-version_spec = importlib.util.spec_from_file_location('version', 'electrum_ltc/version.py')
+version_spec = importlib.util.spec_from_file_location('version', 'actilectrum/version.py')
 version_module = version = importlib.util.module_from_spec(version_spec)
 version_spec.loader.exec_module(version_module)
 
@@ -46,8 +46,8 @@ if platform.system() in ['Linux', 'FreeBSD', 'DragonFly']:
         else:
             usr_share = os.path.expanduser('~/.local/share')
     data_files += [
-        (os.path.join(usr_share, 'applications/'), ['electrum-ltc.desktop']),
-        (os.path.join(usr_share, icons_dirname), ['icons/electrum-ltc.png'])
+        (os.path.join(usr_share, 'applications/'), ['actilectrum.desktop']),
+        (os.path.join(usr_share, icons_dirname), ['icons/actilectrum.png'])
     ]
 
 extras_require = {
@@ -68,7 +68,7 @@ class CustomInstallCommand(install):
             pass
         else:
             try:
-                path = os.path.join(self.install_lib, "electrum_ltc/gui/qt/icons_rc.py")
+                path = os.path.join(self.install_lib, "actilectrum/gui/qt/icons_rc.py")
                 if not os.path.exists(path):
                     subprocess.call(["pyrcc5", "icons.qrc", "-o", path])
             except Exception as e:
@@ -76,35 +76,35 @@ class CustomInstallCommand(install):
 
 
 setup(
-    name="Electrum-LTC",
+    name="Actilectrum",
     version=version.ELECTRUM_VERSION,
     python_requires='>={}'.format(MIN_PYTHON_VERSION),
     install_requires=requirements,
     extras_require=extras_require,
     packages=[
-        'electrum_ltc',
-        'electrum_ltc.gui',
-        'electrum_ltc.gui.qt',
-        'electrum_ltc.plugins',
-    ] + [('electrum_ltc.plugins.'+pkg) for pkg in find_packages('electrum_ltc/plugins')],
+        'actilectrum',
+        'actilectrum.gui',
+        'actilectrum.gui.qt',
+        'actilectrum.plugins',
+    ] + [('actilectrum.plugins.'+pkg) for pkg in find_packages('actilectrum/plugins')],
     package_dir={
-        'electrum_ltc': 'electrum_ltc'
+        'actilectrum': 'actilectrum'
     },
     package_data={
         '': ['*.txt', '*.json', '*.ttf', '*.otf'],
-        'electrum_ltc': [
+        'actilectrum': [
             'wordlist/*.txt',
             'locale/*/LC_MESSAGES/electrum.mo',
         ],
     },
-    scripts=['electrum_ltc/electrum-ltc'],
+    scripts=['actilectrum/actilectrum'],
     data_files=data_files,
-    description="Lightweight Litecoin Wallet",
-    author="Thomas Voegtlin",
-    author_email="thomasv@electrum.org",
+    description="Lightweight Actinium Wallet",
+    author="The Actinium Project",
+    author_email="brakmic@actinium.org",
     license="MIT Licence",
-    url="https://electrum-ltc.org",
-    long_description="""Lightweight Litecoin Wallet""",
+    url="https://actilectrum.org",
+    long_description="""Lightweight Actinium Wallet""",
     cmdclass={
         'install': CustomInstallCommand,
     },

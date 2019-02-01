@@ -2,9 +2,9 @@
 
 # Parameterize
 PYTHON_VERSION=3.6.4
-BUILDDIR=/tmp/electrum-ltc-build
-PACKAGE=Electrum-LTC
-GIT_REPO=https://github.com/pooler/electrum-ltc
+BUILDDIR=/tmp/actilectrum-build
+PACKAGE=Actilectrum
+GIT_REPO=https://github.com/pooler/actilectrum
 LIBSECP_VERSION=452d8e4d2a2f9f1b5be6b02e18f1ba102e5ca0b4
 
 . $(dirname "$0")/base.sh
@@ -65,8 +65,8 @@ git submodule update
 rm  -rf $BUILDDIR > /dev/null 2>&1
 mkdir $BUILDDIR
 
-cp -R ./contrib/deterministic-build/electrum-ltc-locale/locale/ ./electrum_ltc/locale/
-cp    ./contrib/deterministic-build/electrum-ltc-icons/icons_rc.py ./electrum_ltc/gui/qt/
+cp -R ./contrib/deterministic-build/actilectrum-locale/locale/ ./actilectrum/locale/
+cp    ./contrib/deterministic-build/actilectrum-icons/icons_rc.py ./actilectrum/gui/qt/
 
 
 info "Downloading libusb..."
@@ -120,18 +120,18 @@ done
 info "Building binary"
 APP_SIGN="$APP_SIGN" pyinstaller --noconfirm --ascii --clean --name $VERSION contrib/osx/osx.spec || fail "Could not build binary"
 
-info "Adding litecoin URI types to Info.plist"
+info "Adding actinium URI types to Info.plist"
 plutil -insert 'CFBundleURLTypes' \
-	-xml '<array><dict> <key>CFBundleURLName</key> <string>litecoin</string> <key>CFBundleURLSchemes</key> <array><string>litecoin</string></array> </dict></array>' \
+	-xml '<array><dict> <key>CFBundleURLName</key> <string>actinium</string> <key>CFBundleURLSchemes</key> <array><string>actinium</string></array> </dict></array>' \
 	-- dist/$PACKAGE.app/Contents/Info.plist \
 	|| fail "Could not add keys to Info.plist. Make sure the program 'plutil' exists and is installed."
 
 DoCodeSignMaybe "app bundle" "dist/${PACKAGE}.app" "$APP_SIGN" # If APP_SIGN is empty will be a noop
 
 info "Creating .DMG"
-hdiutil create -fs HFS+ -volname $PACKAGE -srcfolder dist/$PACKAGE.app dist/electrum-ltc-$VERSION.dmg || fail "Could not create .DMG"
+hdiutil create -fs HFS+ -volname $PACKAGE -srcfolder dist/$PACKAGE.app dist/actilectrum-$VERSION.dmg || fail "Could not create .DMG"
 
-DoCodeSignMaybe ".DMG" "dist/electrum-ltc-${VERSION}.dmg" "$APP_SIGN" # If APP_SIGN is empty will be a noop
+DoCodeSignMaybe ".DMG" "dist/actilectrum-${VERSION}.dmg" "$APP_SIGN" # If APP_SIGN is empty will be a noop
 
 if [ -z "$APP_SIGN" ]; then
     warn "App was built successfully but was not code signed. Users may get security warnings from macOS."
