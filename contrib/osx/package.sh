@@ -78,11 +78,11 @@ ${genisoimage} \
     -r \
     -dir-mode 0755 \
     -apple \
-    -o Electrum-LTC_uncompressed.dmg \
+    -o Actilectrum_uncompressed.dmg \
     /tmp/actilectrum-macos/image || fail "Unable to create uncompressed dmg"
 
-dmg dmg Electrum-LTC_uncompressed.dmg actilectrum-$VERSION.dmg || fail "Unable to create compressed dmg"
-rm Electrum-LTC_uncompressed.dmg
+dmg dmg Actilectrum_uncompressed.dmg actilectrum-$VERSION.dmg || fail "Unable to create compressed dmg"
+rm Actilectrum_uncompressed.dmg
 
 echo "Done."
 md5sum actilectrum-$VERSION.dmg

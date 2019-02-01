@@ -113,7 +113,7 @@ class Processor(threading.Thread, PrintError):
         part = MIMEBase('application', "actinium-paymentrequest")
         part.set_payload(payment_request)
         encode_base64(part)
-        part.add_header('Content-Disposition', 'attachment; filename="payreq.ltc"')
+        part.add_header('Content-Disposition', 'attachment; filename="payreq.acm"')
         msg.attach(part)
         try:
             s = smtplib.SMTP_SSL(self.imap_server, timeout=2)

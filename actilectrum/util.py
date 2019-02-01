@@ -61,11 +61,11 @@ def inv_dict(d):
 ca_path = certifi.where()
 
 
-base_units = {'LTC':8, 'mLTC':5, 'uLTC':2, 'sat':0}
+base_units = {'ACM':8, 'mLTC':5, 'uLTC':2, 'sat':0}
 base_units_inverse = inv_dict(base_units)
-base_units_list = ['LTC', 'mLTC', 'uLTC', 'sat']  # list(dict) does not guarantee order
+base_units_list = ['ACM', 'mLTC', 'uLTC', 'sat']  # list(dict) does not guarantee order
 
-DECIMAL_POINT_DEFAULT = 8  # LTC
+DECIMAL_POINT_DEFAULT = 8  # ACM
 
 
 class UnknownBaseUnit(Exception): pass
@@ -148,7 +148,7 @@ class Satoshis(object):
         return 'Satoshis(%d)'%self.value
 
     def __str__(self):
-        return format_satoshis(self.value) + " LTC"
+        return format_satoshis(self.value) + " ACM"
 
     def __eq__(self, other):
         return self.value == other.value
@@ -614,20 +614,10 @@ def time_difference(distance_in_time, include_seconds):
         return "over %d years" % (round(distance_in_minutes / 525600))
 
 mainnet_block_explorers = {
-    'Bchain.info': ('https://bchain.info/',
-                        {'tx': 'LTC/tx/', 'addr': 'LTC/addr/'}),
-    'Blockchair.com': ('https://blockchair.com/actinium/',
-                        {'tx': 'transaction/', 'addr': 'address/'}),
-    'BlockCypher.com': ('https://live.blockcypher.com/ltc/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
-    'explorer.actinium.net': ('http://explorer.actinium.net/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
-    'LiteCore': ('https://insight.litecore.io/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
-    'SoChain': ('https://chain.so/',
-                        {'tx': 'tx/LTC/', 'addr': 'address/LTC/'}),
-    'system default': ('blockchain://12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
+    'Explorer': ('https://explorer.actinium.org/',
+                        {'tx': 'transactions/', 'addr': 'addresses/'}),
+    'Explorer2': ('https://explorer2.actinium.org/',
+                        {'tx': 'transactions/', 'addr': 'addresses/'}),
 }
 
 testnet_block_explorers = {
