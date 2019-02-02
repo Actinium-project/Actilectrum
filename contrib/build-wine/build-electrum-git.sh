@@ -27,7 +27,7 @@ git submodule update
 VERSION=`git describe --tags --dirty --always`
 echo "Last commit: $VERSION"
 
-pushd ../../contrib/deterministic-build/actilectrum-locale
+pushd ./contrib/deterministic-build/actilectrum-locale
 if ! which msgfmt > /dev/null 2>&1; then
     echo "Please install gettext"
     exit 1
