@@ -8,7 +8,7 @@
 
   !define PRODUCT_NAME "Actilectrum"
   !define PRODUCT_WEB_SITE "https://github.com/Actinium-project/actilectrum"
-  !define PRODUCT_PUBLISHER "Actilectrum Technologies GmbH"
+  !define PRODUCT_PUBLISHER "The Actinium Project Ltd"
   !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 
 ;--------------------------------
