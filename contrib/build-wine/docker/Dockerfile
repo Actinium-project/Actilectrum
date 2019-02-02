@@ -5,6 +5,7 @@ ENV LC_ALL=C.UTF-8 LANG=C.UTF-8
 RUN dpkg --add-architecture i386 && \
     apt-get update -q && \
     apt-get install -qy \
+        sudo \
         wget=1.19.4-1ubuntu2.1 \
         gnupg2=2.2.4-1ubuntu1.2 \
         dirmngr=2.2.4-1ubuntu1.2 \
