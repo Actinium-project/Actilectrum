@@ -5,6 +5,8 @@ build/
 dist/
 *.egg/
 contrib/pyinstaller/
+contrib/osx/CalinsQRReader/*
+contrib/osx/libsecp256k1.0.dylib
 Actilectrum.egg-info/
 actilectrum/locale/
 .devlocaltmp/
