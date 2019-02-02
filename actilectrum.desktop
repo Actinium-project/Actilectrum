@@ -1,0 +1,21 @@
+# If you want Actilectrum to appear in a Linux app launcher ("start menu"), install this by doing:
+# sudo desktop-file-install actilectrum.desktop
+
+[Desktop Entry]
+Comment=Lightweight Actinium Client
+Exec=sh -c "PATH=\"\\$HOME/.local/bin:\\$PATH\"; actilectrum %u"
+GenericName[en_US]=Actinium Wallet
+GenericName=Actinium Wallet
+Icon=actilectrum
+Name[en_US]=Actilectrum Wallet
+Name=Actilectrum Wallet
+Categories=Finance;Network;
+StartupNotify=false
+Terminal=false
+Type=Application
+MimeType=x-scheme-handler/actinium;
+Actions=Testnet;
+
+[Desktop Action Testnet]
+Exec=sh -c "PATH=\"\\$HOME/.local/bin:\\$PATH\"; actilectrum --testnet %u"
+Name=Testnet mode
