@@ -615,9 +615,9 @@ def time_difference(distance_in_time, include_seconds):
 
 mainnet_block_explorers = {
     'Explorer': ('https://explorer.actinium.org/',
-                        {'tx': 'transactions/', 'addr': 'addresses/'}),
+                        {'tx': 'tx/', 'addr': 'address/'}),
     'Explorer2': ('https://explorer2.actinium.org/',
-                        {'tx': 'transactions/', 'addr': 'addresses/'}),
+                        {'tx': 'tx/', 'addr': 'address/'}),
 }
 
 testnet_block_explorers = {
