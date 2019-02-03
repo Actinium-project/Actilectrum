@@ -1,7 +1,7 @@
 Actilectrum - Lightweight Actinium client
 ==========================================
 
-Actilectrum is a port of Actilectrum, the Bitcoin wallet, to Actinium.
+Actilectrum is a port of Electrum, the Bitcoin wallet, to Actinium.
 
 ::
 
