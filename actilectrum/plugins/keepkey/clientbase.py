@@ -1,10 +1,11 @@
 import time
 from struct import pack
 
+from actilectrum import ecc
 from actilectrum.i18n import _
 from actilectrum.util import PrintError, UserCancelled
 from actilectrum.keystore import bip39_normalize_passphrase
-from actilectrum.bip32 import serialize_xpub, convert_bip32_path_to_list_of_uint32
+from actilectrum.bip32 import BIP32Node, convert_bip32_path_to_list_of_uint32
 
 
 class GuiMixin(object):
@@ -121,8 +122,8 @@ class KeepKeyClientBase(GuiMixin, PrintError):
 
     def has_usable_connection_with_device(self):
         try:
-            res = self.ping("electrum pinging device")
-            assert res == "electrum pinging device"
+            res = self.ping("actilectrum pinging device")
+            assert res == "actilectrum pinging device"
         except BaseException:
             return False
         return True
@@ -154,7 +155,12 @@ class KeepKeyClientBase(GuiMixin, PrintError):
         address_n = self.expand_path(bip32_path)
         creating = False
         node = self.get_public_node(address_n, creating).node
-        return serialize_xpub(xtype, node.chain_code, node.public_key, node.depth, self.i4b(node.fingerprint), self.i4b(node.child_num))
+        return BIP32Node(xtype=xtype,
+                         eckey=ecc.ECPubkey(node.public_key),
+                         chaincode=node.chain_code,
+                         depth=node.depth,
+                         fingerprint=self.i4b(node.fingerprint),
+                         child_number=self.i4b(node.child_num)).to_xpub()
 
     def toggle_passphrase(self):
         if self.features.passphrase_protection:

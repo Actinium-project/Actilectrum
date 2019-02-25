@@ -20,7 +20,7 @@ cd tmp
 
 pushd $WINEPREFIX/drive_c/actilectrum
 
-# Load electrum-icons and electrum-locale for this release
+# Load actilectrum-locale for this release
 git submodule init
 git submodule update
 
@@ -35,7 +35,7 @@ fi
 for i in ./locale/*; do
     dir=$WINEPREFIX/drive_c/actilectrum/actilectrum/$i/LC_MESSAGES
     mkdir -p $dir
-    msgfmt --output-file=$dir/electrum.mo $i/electrum.po || true
+    msgfmt --output-file=$dir/actilectrum.mo $i/actilectrum.po || true
 done
 popd
 
@@ -43,7 +43,6 @@ find -exec touch -d '2000-11-11T11:11:11+00:00' {} +
 popd
 
 cp $WINEPREFIX/drive_c/actilectrum/LICENCE .
-cp $WINEPREFIX/drive_c/actilectrum/contrib/deterministic-build/actilectrum-icons/icons_rc.py $WINEPREFIX/drive_c/actilectrum/actilectrum/gui/qt/
 
 # Install frozen dependencies
 $PYTHON -m pip install -r ../../deterministic-build/requirements.txt
@@ -51,7 +50,7 @@ $PYTHON -m pip install -r ../../deterministic-build/requirements.txt
 $PYTHON -m pip install -r ../../deterministic-build/requirements-hw.txt
 
 pushd $WINEPREFIX/drive_c/actilectrum
-$PYTHON setup.py install
+$PYTHON -m pip install .
 popd
 
 cd ..
@@ -75,4 +74,4 @@ mv actilectrum-setup.exe $NAME_ROOT-$VERSION-setup.exe
 cd ..
 
 echo "Done."
-md5sum dist/actilectrum*exe
+sha256sum dist/actilectrum*exe

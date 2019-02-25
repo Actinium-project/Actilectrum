@@ -170,7 +170,7 @@ def hash_decode(x: str) -> bytes:
     return bfh(x)[::-1]
 
 
-################################## electrum seeds
+################################## actilectrum seeds
 
 
 def is_new_seed(x: str, prefix=version.SEED_PREFIX) -> bool:
@@ -187,15 +187,15 @@ def is_old_seed(seed: str) -> bool:
     try:
         # checks here are deliberately left weak for legacy reasons, see #3149
         old_mnemonic.mn_decode(words)
-        uses_electrum_words = True
+        uses_actilectrum_words = True
     except Exception:
-        uses_electrum_words = False
+        uses_actilectrum_words = False
     try:
         seed = bfh(seed)
         is_hex = (len(seed) == 16 or len(seed) == 32)
     except Exception:
         is_hex = False
-    return is_hex or (uses_electrum_words and (len(words) == 12 or len(words) == 24))
+    return is_hex or (uses_actilectrum_words and (len(words) == 12 or len(words) == 24))
 
 
 def seed_type(x: str) -> str:

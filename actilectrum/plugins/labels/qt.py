@@ -2,15 +2,12 @@ from functools import partial
 import traceback
 import sys
 
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
+from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtWidgets import (QHBoxLayout, QLabel, QVBoxLayout)
 
 from actilectrum.plugin import hook
 from actilectrum.i18n import _
-from actilectrum.gui.qt import EnterButton
-from actilectrum.gui.qt.util import ThreadedButton, Buttons
-from actilectrum.gui.qt.util import WindowModalDialog, OkButton
+from actilectrum.gui.qt.util import ThreadedButton, Buttons, EnterButton, WindowModalDialog, OkButton
 
 from .labels import LabelsPlugin
 

@@ -99,7 +99,7 @@ class SettingsDialog(Factory.Popup):
     def __init__(self, app):
         self.app = app
         self.plugins = self.app.plugins
-        self.config = self.app.electrum_config
+        self.config = self.app.actilectrum_config
         Factory.Popup.__init__(self)
         layout = self.ids.scrollviewlayout
         layout.bind(minimum_height=layout.setter('height'))
@@ -141,7 +141,7 @@ class SettingsDialog(Factory.Popup):
         self._unit_dialog.open()
 
     def coinselect_status(self):
-        return coinchooser.get_name(self.app.electrum_config)
+        return coinchooser.get_name(self.app.actilectrum_config)
 
     def coinselect_dialog(self, item, dt):
         if self._coinselect_dialog is None:

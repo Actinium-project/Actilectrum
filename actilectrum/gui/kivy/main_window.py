@@ -51,7 +51,7 @@ util = False
 
 # register widget cache for keeping memory down timeout to forever to cache
 # the data
-Cache.register('electrum_ltc_widgets', timeout=0)
+Cache.register('actilectrum_widgets', timeout=0)
 
 from kivy.uix.screenmanager import Screen
 from kivy.uix.tabbedpanel import TabbedPanel
@@ -77,7 +77,7 @@ from actilectrum.util import (base_units, NoDynamicFeeEstimates, decimal_point_t
 
 class ElectrumWindow(App):
 
-    electrum_config = ObjectProperty(None)
+    actilectrum_config = ObjectProperty(None)
     language = StringProperty('en')
 
     # properties might be updated by the network
@@ -145,15 +145,15 @@ class ElectrumWindow(App):
 
     use_rbf = BooleanProperty(False)
     def on_use_rbf(self, instance, x):
-        self.electrum_config.set_key('use_rbf', self.use_rbf, True)
+        self.actilectrum_config.set_key('use_rbf', self.use_rbf, True)
 
     use_change = BooleanProperty(False)
     def on_use_change(self, instance, x):
-        self.electrum_config.set_key('use_change', self.use_change, True)
+        self.actilectrum_config.set_key('use_change', self.use_change, True)
 
     use_unconfirmed = BooleanProperty(False)
     def on_use_unconfirmed(self, instance, x):
-        self.electrum_config.set_key('confirmed_only', not self.use_unconfirmed, True)
+        self.actilectrum_config.set_key('confirmed_only', not self.use_unconfirmed, True)
 
     def set_URI(self, uri):
         self.switch_to('send')
@@ -187,7 +187,7 @@ class ElectrumWindow(App):
         self._trigger_update_history()
 
     def _get_bu(self):
-        decimal_point = self.electrum_config.get('decimal_point', DECIMAL_POINT_DEFAULT)
+        decimal_point = self.actilectrum_config.get('decimal_point', DECIMAL_POINT_DEFAULT)
         try:
             return decimal_point_to_base_unit_name(decimal_point)
         except UnknownBaseUnit:
@@ -196,7 +196,7 @@ class ElectrumWindow(App):
     def _set_bu(self, value):
         assert value in base_units.keys()
         decimal_point = base_unit_name_to_decimal_point(value)
-        self.electrum_config.set_key('decimal_point', decimal_point, True)
+        self.actilectrum_config.set_key('decimal_point', decimal_point, True)
         self._trigger_update_status()
         self._trigger_update_history()
 
@@ -283,7 +283,7 @@ class ElectrumWindow(App):
         App.__init__(self)#, **kwargs)
 
         title = _('Actilectrum App')
-        self.electrum_config = config = kwargs.get('config', None)
+        self.actilectrum_config = config = kwargs.get('config', None)
         self.language = config.get('language', 'en')
         self.network = network = kwargs.get('network', None)  # type: Network
         if self.network:
@@ -314,7 +314,7 @@ class ElectrumWindow(App):
         # cached dialogs
         self._settings_dialog = None
         self._password_dialog = None
-        self.fee_status = self.electrum_config.get_fee_status()
+        self.fee_status = self.actilectrum_config.get_fee_status()
 
     def on_pr(self, pr):
         if not self.wallet:
@@ -438,7 +438,7 @@ class ElectrumWindow(App):
         from jnius import autoclass, cast
         from android import activity
         PythonActivity = autoclass('org.kivy.android.PythonActivity')
-        SimpleScannerActivity = autoclass("org.electrum.qr.SimpleScannerActivity")
+        SimpleScannerActivity = autoclass("org.actilectrum.qr.SimpleScannerActivity")
         Intent = autoclass('android.content.Intent')
         intent = Intent(PythonActivity.mActivity, SimpleScannerActivity)
 
@@ -517,9 +517,9 @@ class ElectrumWindow(App):
             self.network.register_callback(self.on_quotes, ['on_quotes'])
             self.network.register_callback(self.on_history, ['on_history'])
         # load wallet
-        self.load_wallet_by_name(self.electrum_config.get_wallet_path())
+        self.load_wallet_by_name(self.actilectrum_config.get_wallet_path())
         # URI passed in config
-        uri = self.electrum_config.get('url')
+        uri = self.actilectrum_config.get('url')
         if uri:
             self.set_URI(uri)
 
@@ -538,7 +538,7 @@ class ElectrumWindow(App):
         elif not self.wallet:
             # wizard did not return a wallet; and there is no wallet open atm
             # try to open last saved wallet (potentially start wizard again)
-            self.load_wallet_by_name(self.electrum_config.get_wallet_path(), ask_if_wizard=True)
+            self.load_wallet_by_name(self.actilectrum_config.get_wallet_path(), ask_if_wizard=True)
 
     def load_wallet_by_name(self, path, ask_if_wizard=False):
         if not path:
@@ -554,7 +554,7 @@ class ElectrumWindow(App):
         else:
             def launch_wizard():
                 storage = WalletStorage(path, manual_upgrades=True)
-                wizard = Factory.InstallWizard(self.electrum_config, self.plugins, storage)
+                wizard = Factory.InstallWizard(self.actilectrum_config, self.plugins, storage)
                 wizard.bind(on_wizard_complete=self.on_wizard_complete)
                 action = wizard.storage.get_action()
                 wizard.run(action)
@@ -575,7 +575,7 @@ class ElectrumWindow(App):
     def on_stop(self):
         Logger.info('on_stop')
         if self.wallet:
-            self.electrum_config.save_last_wallet(self.wallet)
+            self.actilectrum_config.save_last_wallet(self.wallet)
         self.stop_wallet()
 
     def stop_wallet(self):
@@ -642,7 +642,7 @@ class ElectrumWindow(App):
 
     @profiler
     def init_ui(self):
-        ''' Initialize The Ux part of electrum. This function performs the basic
+        ''' Initialize The Ux part of actilectrum. This function performs the basic
         tasks of setting up the ui.
         '''
         #from weakref import ref
@@ -658,8 +658,8 @@ class ElectrumWindow(App):
                          module='actilectrum.gui.kivy.uix.qrcodewidget')
 
         # preload widgets. Remove this if you want to load the widgets on demand
-        #Cache.append('electrum_ltc_widgets', 'AnimatedPopup', Factory.AnimatedPopup())
-        #Cache.append('electrum_ltc_widgets', 'QRCodeWidget', Factory.QRCodeWidget())
+        #Cache.append('actilectrum_widgets', 'AnimatedPopup', Factory.AnimatedPopup())
+        #Cache.append('actilectrum_widgets', 'QRCodeWidget', Factory.QRCodeWidget())
 
         # load and focus the ui
         self.root.manager = self.root.ids['manager']
@@ -671,7 +671,7 @@ class ElectrumWindow(App):
         self.receive_screen = None
         self.requests_screen = None
         self.address_screen = None
-        self.icon = "icons/actilectrum.png"
+        self.icon = "actilectrum/gui/icons/actilectrum.png"
         self.tabs = self.root.ids['tabs']
 
     def update_interfaces(self, dt):
@@ -756,13 +756,13 @@ class ElectrumWindow(App):
         from actilectrum.transaction import TxOutput
         if run_hook('abort_send', self):
             return ''
-        inputs = self.wallet.get_spendable_coins(None, self.electrum_config)
+        inputs = self.wallet.get_spendable_coins(None, self.actilectrum_config)
         if not inputs:
             return ''
         addr = str(self.send_screen.screen.address) or self.wallet.dummy_address()
         outputs = [TxOutput(TYPE_ADDRESS, addr, '!')]
         try:
-            tx = self.wallet.make_unsigned_transaction(inputs, outputs, self.electrum_config)
+            tx = self.wallet.make_unsigned_transaction(inputs, outputs, self.actilectrum_config)
         except NoDynamicFeeEstimates as e:
             Clock.schedule_once(lambda dt, bound_e=e: self.show_error(str(bound_e)))
             return ''
@@ -828,9 +828,6 @@ class ElectrumWindow(App):
             label.touched = True
             self._clipboard.copy(label.data)
             Clock.schedule_once(lambda dt: self.show_info(_('Text copied to clipboard.\nTap again to display it as QR code.')))
-
-    def set_send(self, address, amount, label, message):
-        self.send_payment(address, amount=amount, label=label, message=message)
 
     def show_error(self, error, width='200dp', pos=None, arrow_pos=None,
         exit=False, icon='atlas://actilectrum/gui/kivy/theming/light/error', duration=0,
@@ -982,7 +979,7 @@ class ElectrumWindow(App):
 
     def requests_dialog(self, screen):
         from .uix.dialogs.requests import RequestsDialog
-        if len(self.wallet.get_sorted_requests(self.electrum_config)) == 0:
+        if len(self.wallet.get_sorted_requests(self.actilectrum_config)) == 0:
             self.show_info(_('No saved requests.'))
             return
         popup = RequestsDialog(self, screen, None)
@@ -998,12 +995,12 @@ class ElectrumWindow(App):
     def fee_dialog(self, label, dt):
         from .uix.dialogs.fee_dialog import FeeDialog
         def cb():
-            self.fee_status = self.electrum_config.get_fee_status()
-        fee_dialog = FeeDialog(self, self.electrum_config, cb)
+            self.fee_status = self.actilectrum_config.get_fee_status()
+        fee_dialog = FeeDialog(self, self.actilectrum_config, cb)
         fee_dialog.open()
 
     def on_fee(self, event, *arg):
-        self.fee_status = self.electrum_config.get_fee_status()
+        self.fee_status = self.actilectrum_config.get_fee_status()
 
     def protected(self, msg, f, args):
         if self.wallet.has_password():
@@ -1036,7 +1033,7 @@ class ElectrumWindow(App):
         self.stop_wallet()
         os.unlink(wallet_path)
         self.show_error(_("Wallet removed: {}").format(basename))
-        new_path = self.electrum_config.get_wallet_path()
+        new_path = self.actilectrum_config.get_wallet_path()
         self.load_wallet_by_name(new_path)
 
     def show_seed(self, label):

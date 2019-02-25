@@ -50,7 +50,7 @@ Transaction > From File in Actilectrum or really any tool.
 
 - I find this command useful (at top level) ... but I'm a VIM user.
 
-    ctags -f .tags electrum `find . -name ENV -prune -o -name \*.py`
+    ctags -f .tags actilectrum `find . -name ENV -prune -o -name \*.py`
 
 
 ### Working with latest ckcc-protocol

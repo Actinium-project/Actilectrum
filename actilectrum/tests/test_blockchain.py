@@ -59,7 +59,7 @@ class TestBlockchain(SequentialTestCase):
         super().setUp()
         self.data_dir = tempfile.mkdtemp()
         make_dir(os.path.join(self.data_dir, 'forks'))
-        self.config = SimpleConfig({'electrum_path': self.data_dir})
+        self.config = SimpleConfig({'actilectrum_path': self.data_dir})
         blockchain.blockchains = {}
 
     def tearDown(self):

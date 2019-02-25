@@ -98,7 +98,7 @@ SEED_TEST_CASES = {
 class Test_NewMnemonic(SequentialTestCase):
 
     def test_mnemonic_to_seed_basic(self):
-        # note: not a valid electrum seed
+        # note: not a valid actilectrum seed
         seed = mnemonic.Mnemonic.mnemonic_to_seed(mnemonic='foobar', passphrase='none')
         self.assertEqual('741b72fd15effece6bfe5a26a52184f66811bd2be363190e07a42cca442b1a5bb22b3ad0eb338197287e6d314866c7fba863ac65d3f156087a5052ebc7157fce',
                          bh2u(seed))

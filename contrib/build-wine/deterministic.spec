@@ -22,7 +22,11 @@ hiddenimports += collect_submodules('btchip')
 hiddenimports += collect_submodules('keepkeylib')
 hiddenimports += collect_submodules('websocket')
 hiddenimports += collect_submodules('ckcc')
-hiddenimports += ['_scrypt']
+
+# safetlib imports PyQt5.Qt.  We use a local updated copy of pinmatrix.py until they
+# release a new version that includes https://github.com/archos-safe-t/python-safet/commit/b1eab3dba4c04fdfc1fcf17b66662c28c5f2380e
+hiddenimports.remove('safetlib.qt.pinmatrix')
+
 
 # Add libusb binary
 binaries = [(PYHOME+"/libusb-1.0.dll", ".")]
@@ -38,6 +42,7 @@ datas = [
     (home+'actilectrum/locale', 'actilectrum/locale'),
     (home+'actilectrum/plugins', 'actilectrum/plugins'),
     ('C:\\Program Files (x86)\\ZBar\\bin\\', '.'),
+    (home+'actilectrum/gui/icons', 'actilectrum/gui/icons'),
 ]
 datas += collect_data_files('trezorlib')
 datas += collect_data_files('safetlib')
@@ -115,7 +120,7 @@ exe_standalone = EXE(
     debug=False,
     strip=None,
     upx=False,
-    icon=home+'icons/actilectrum.ico',
+    icon=home+'actilectrum/gui/icons/actilectrum.ico',
     console=False)
     # console=True makes an annoying black box pop up, but it does make Actilectrum output command line commands, with this turned off no output will be given but commands can still be used
 
@@ -128,7 +133,7 @@ exe_portable = EXE(
     debug=False,
     strip=None,
     upx=False,
-    icon=home+'icons/actilectrum.ico',
+    icon=home+'actilectrum/gui/icons/actilectrum.ico',
     console=False)
 
 #####
@@ -142,7 +147,7 @@ exe_dependent = EXE(
     debug=False,
     strip=None,
     upx=False,
-    icon=home+'icons/actilectrum.ico',
+    icon=home+'actilectrum/gui/icons/actilectrum.ico',
     console=False)
 
 coll = COLLECT(
@@ -153,6 +158,6 @@ coll = COLLECT(
     strip=None,
     upx=True,
     debug=False,
-    icon=home+'icons/actilectrum.ico',
+    icon=home+'actilectrum/gui/icons/actilectrum.ico',
     console=False,
     name=os.path.join('dist', 'actilectrum'))

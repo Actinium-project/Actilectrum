@@ -1,11 +1,15 @@
 from functools import partial
 import threading
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QGridLayout, QInputDialog, QPushButton
-from PyQt5.QtWidgets import QVBoxLayout, QLabel
+from PyQt5.QtCore import Qt, QEventLoop, pyqtSignal, QRegExp
+from PyQt5.QtGui import QRegExpValidator
+from PyQt5.QtWidgets import (QVBoxLayout, QLabel, QGridLayout, QPushButton,
+                             QHBoxLayout, QButtonGroup, QGroupBox, QDialog,
+                             QTextEdit, QLineEdit, QRadioButton, QCheckBox, QWidget,
+                             QMessageBox, QFileDialog, QSlider, QTabWidget)
 
-from actilectrum.gui.qt.util import *
+from actilectrum.gui.qt.util import (WindowModalDialog, WWLabel, Buttons, CancelButton,
+                                  OkButton, CloseButton)
 from actilectrum.i18n import _
 from actilectrum.plugin import hook
 from actilectrum.util import bh2u
@@ -252,7 +256,7 @@ class QtPlugin(QtPluginBase):
             else:
                 msg = _("Enter the master private key beginning with xprv:")
                 def set_enabled():
-                    from electrum.bip32 import is_xprv
+                    from actilectrum.bip32 import is_xprv
                     wizard.next_button.setEnabled(is_xprv(clean_text(text)))
                 text.textChanged.connect(set_enabled)
                 next_enabled = False
@@ -295,8 +299,8 @@ class QtPlugin(QtPluginBase):
 
 
 class Plugin(KeepKeyPlugin, QtPlugin):
-    icon_paired = ":icons/keepkey.png"
-    icon_unpaired = ":icons/keepkey_unpaired.png"
+    icon_paired = "keepkey.png"
+    icon_unpaired = "keepkey_unpaired.png"
 
     @classmethod
     def pin_matrix_widget_class(self):

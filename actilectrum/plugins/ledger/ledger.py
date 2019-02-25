@@ -3,8 +3,9 @@ import hashlib
 import sys
 import traceback
 
+from actilectrum import ecc
 from actilectrum.bitcoin import TYPE_ADDRESS, int_to_hex, var_int
-from actilectrum.bip32 import serialize_xpub
+from actilectrum.bip32 import BIP32Node
 from actilectrum.i18n import _
 from actilectrum.keystore import Hardware_KeyStore
 from actilectrum.transaction import Transaction
@@ -112,8 +113,12 @@ class Ledger_Client():
         depth = len(splitPath)
         lastChild = splitPath[len(splitPath) - 1].split('\'')
         childnum = int(lastChild[0]) if len(lastChild) == 1 else 0x80000000 | int(lastChild[0])
-        xpub = serialize_xpub(xtype, nodeData['chainCode'], publicKey, depth, self.i4b(fingerprint), self.i4b(childnum))
-        return xpub
+        return BIP32Node(xtype=xtype,
+                         eckey=ecc.ECPubkey(publicKey),
+                         chaincode=nodeData['chainCode'],
+                         depth=depth,
+                         fingerprint=self.i4b(fingerprint),
+                         child_number=self.i4b(childnum)).to_xpub()
 
     def has_detached_pin_support(self, client):
         try:
@@ -228,7 +233,7 @@ class Ledger_KeyStore(Hardware_KeyStore):
     def get_client(self):
         return self.plugin.get_client(self).dongleObject
 
-    def get_client_electrum(self):
+    def get_client_actilectrum(self):
         return self.plugin.get_client(self)
 
     def give_error(self, message, clear_client = False):
@@ -336,12 +341,12 @@ class Ledger_KeyStore(Hardware_KeyStore):
                 p2shTransaction = True
 
             if txin['type'] in ['p2wpkh-p2sh', 'p2wsh-p2sh']:
-                if not self.get_client_electrum().supports_segwit():
+                if not self.get_client_actilectrum().supports_segwit():
                     self.give_error(MSG_NEEDS_FW_UPDATE_SEGWIT)
                 segwitTransaction = True
 
             if txin['type'] in ['p2wpkh', 'p2wsh']:
-                if not self.get_client_electrum().supports_native_segwit():
+                if not self.get_client_actilectrum().supports_native_segwit():
                     self.give_error(MSG_NEEDS_FW_UPDATE_SEGWIT)
                 segwitTransaction = True
 
@@ -389,7 +394,7 @@ class Ledger_KeyStore(Hardware_KeyStore):
         # - only one output and one change is authorized (for hw.1 and nano)
         # - at most one output can bypass confirmation (~change) (for all)
         if not p2shTransaction:
-            if not self.get_client_electrum().supports_multi_output():
+            if not self.get_client_actilectrum().supports_multi_output():
                 if len(tx.outputs()) > 2:
                     self.give_error("Transaction with more than 2 outputs not supported")
             has_change = False
@@ -547,7 +552,14 @@ class LedgerPlugin(HW_PluginBase):
                    (0x2581, 0x3b7c), # HW.1 ledger production
                    (0x2581, 0x4b7c), # HW.1 ledger test
                    (0x2c97, 0x0000), # Blue
-                   (0x2c97, 0x0001)  # Nano-S
+                   (0x2c97, 0x0001), # Nano-S
+                   (0x2c97, 0x0004), # Nano-X
+                   (0x2c97, 0x0005), # RFU
+                   (0x2c97, 0x0006), # RFU
+                   (0x2c97, 0x0007), # RFU
+                   (0x2c97, 0x0008), # RFU
+                   (0x2c97, 0x0009), # RFU
+                   (0x2c97, 0x000a)  # RFU
                  ]
     SUPPORTED_XTYPES = ('standard', 'p2wpkh-p2sh', 'p2wpkh', 'p2wsh-p2sh', 'p2wsh')
 

@@ -1,11 +1,14 @@
 from functools import partial
 import threading
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QGridLayout, QInputDialog, QPushButton
-from PyQt5.QtWidgets import QVBoxLayout, QLabel
+from PyQt5.QtCore import Qt, QEventLoop, pyqtSignal
+from PyQt5.QtWidgets import (QVBoxLayout, QLabel, QGridLayout, QPushButton,
+                             QHBoxLayout, QButtonGroup, QGroupBox, QDialog,
+                             QLineEdit, QRadioButton, QCheckBox, QWidget,
+                             QMessageBox, QFileDialog, QSlider, QTabWidget)
 
-from actilectrum.gui.qt.util import *
+from actilectrum.gui.qt.util import (WindowModalDialog, WWLabel, Buttons, CancelButton,
+                                      OkButton, CloseButton)
 from actilectrum.i18n import _
 from actilectrum.plugin import hook
 from actilectrum.util import bh2u
@@ -259,8 +262,8 @@ class QtPlugin(QtPluginBase):
 
 
 class Plugin(TrezorPlugin, QtPlugin):
-    icon_unpaired = ":icons/trezor_unpaired.png"
-    icon_paired = ":icons/trezor.png"
+    icon_unpaired = "trezor_unpaired.png"
+    icon_paired = "trezor.png"
 
     @classmethod
     def pin_matrix_widget_class(self):

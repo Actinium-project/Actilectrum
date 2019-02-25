@@ -85,4 +85,4 @@ dmg dmg Actilectrum_uncompressed.dmg actilectrum-$VERSION.dmg || fail "Unable to
 rm Actilectrum_uncompressed.dmg
 
 echo "Done."
-md5sum actilectrum-$VERSION.dmg
+sha256sum actilectrum-$VERSION.dmg

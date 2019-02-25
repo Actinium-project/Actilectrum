@@ -7,7 +7,7 @@ from actilectrum.network import parse_servers, Network
 from actilectrum.interface import Interface
 
 
-#electrum.util.set_verbosity(True)
+#actilectrum.util.set_verbosity(True)
 
 async def get_peers(network: Network):
     while not network.is_connected():

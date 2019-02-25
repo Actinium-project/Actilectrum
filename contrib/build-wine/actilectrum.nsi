@@ -72,7 +72,7 @@
   !define MUI_ABORTWARNING
   !define MUI_ABORTWARNING_TEXT "Are you sure you wish to abort the installation of ${PRODUCT_NAME}?"
   
-  !define MUI_ICON "c:\actilectrum\icons\actilectrum.ico"
+  !define MUI_ICON "c:\actilectrum\actilectrum\gui\icons\actilectrum.ico"
   
 ;--------------------------------
 ;Pages
@@ -111,7 +111,7 @@ Section
   
   ;Files to pack into the installer
   File /r "dist\actilectrum\*.*"
-  File "c:\actilectrum\icons\actilectrum.ico"
+  File "c:\actilectrum\actilectrum\gui\icons\actilectrum.ico"
 
   ;Store installation folder
   WriteRegStr HKCU "Software\${PRODUCT_NAME}" "" $INSTDIR

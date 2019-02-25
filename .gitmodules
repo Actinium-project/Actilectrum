@@ -1,6 +1,3 @@
-[submodule "contrib/deterministic-build/actilectrum-icons"]
-	path = contrib/deterministic-build/actilectrum-icons
-	url = https://github.com/Actinium-project/actilectrum-icons
 [submodule "contrib/deterministic-build/actilectrum-locale"]
 	path = contrib/deterministic-build/actilectrum-locale
 	url = https://github.com/Actinium-project/actilectrum-locale

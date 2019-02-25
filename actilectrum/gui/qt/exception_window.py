@@ -27,12 +27,12 @@ import traceback
 
 from PyQt5.QtCore import QObject
 import PyQt5.QtCore as QtCore
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import (QWidget, QLabel, QPushButton, QTextEdit,
+                             QMessageBox, QHBoxLayout, QVBoxLayout)
 
 from actilectrum.i18n import _
 from actilectrum.base_crash_reporter import BaseCrashReporter
-from .util import MessageBoxMixin
+from .util import MessageBoxMixin, read_QIcon
 
 
 class Exception_Window(BaseCrashReporter, QWidget, MessageBoxMixin):
@@ -74,7 +74,7 @@ class Exception_Window(BaseCrashReporter, QWidget, MessageBoxMixin):
 
         report_button = QPushButton(_('Send Bug Report'))
         report_button.clicked.connect(self.send_report)
-        report_button.setIcon(QIcon(":icons/tab_send.png"))
+        report_button.setIcon(read_QIcon("tab_send.png"))
         buttons.addWidget(report_button)
 
         never_button = QPushButton(_('Never'))

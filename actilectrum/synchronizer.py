@@ -204,7 +204,7 @@ class Synchronizer(SynchronizerBase):
         self.wallet.set_up_to_date(False)
         # request missing txns, if any
         for history in self.wallet.history.values():
-            # Old electrum servers returned ['*'] when all history for the address
+            # Old actilectrum servers returned ['*'] when all history for the address
             # was pruned. This no longer happens but may remain in old wallets.
             if history == ['*']: continue
             await self._request_missing_txs(history)

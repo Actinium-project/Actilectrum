@@ -1,3 +1,2 @@
 PyQt5
 pycryptodomex
-scrypt>=0.6.0

@@ -21,24 +21,30 @@ folder.
 2. Build image
 
     ```
-    $ sudo docker build -t electrum-android-builder-img electrum/gui/kivy/tools
+    $ sudo docker build -t actilectrum-android-builder-img actilectrum/gui/kivy/tools
     ```
 
-3. Prepare pure python dependencies
+3. Build locale files
 
     ```
-    $ sudo ./contrib/make_packages
+    $ ./contrib/make_locale
     ```
 
-4. Build binaries
+4. Prepare pure python dependencies
+
+    ```
+    $ ./contrib/make_packages
+    ```
+
+5. Build binaries
 
     ```
     $ sudo docker run -it --rm \
-        --name electrum-android-builder-cont \
-        -v $PWD:/home/user/wspace/electrum \
+        --name actilectrum-android-builder-cont \
+        -v $PWD:/home/user/wspace/actilectrum \
         -v ~/.keystore:/home/user/.keystore \
-        --workdir /home/user/wspace/electrum \
-        electrum-android-builder-img \
+        --workdir /home/user/wspace/actilectrum \
+        actilectrum-android-builder-img \
         ./contrib/make_apk
     ```
     This mounts the project dir inside the container,
@@ -59,16 +65,16 @@ You probably need to clear the cache: `rm -rf .buildozer/android/platform/build/
 Assuming `adb` is installed:
 ```
 $ adb -d install -r bin/Actilectrum-*-debug.apk
-$ adb shell monkey -p org.electrum.electrum 1
+$ adb shell monkey -p org.actilectrum.actilectrum 1
 ```
 
 
 ### How do I get an interactive shell inside docker?
 ```
 $ sudo docker run -it --rm \
-    -v $PWD:/home/user/wspace/electrum \
-    --workdir /home/user/wspace/electrum \
-    electrum-android-builder-img
+    -v $PWD:/home/user/wspace/actilectrum \
+    --workdir /home/user/wspace/actilectrum \
+    actilectrum-android-builder-img
 ```
 
 
@@ -79,6 +85,6 @@ See `log_level` in `buildozer.spec`
 ### Kivy can be run directly on Linux Desktop. How?
 Install Kivy.
 
-Build atlas: `(cd electrum/gui/kivy/; make theming)`
+Build atlas: `(cd actilectrum/gui/kivy/; make theming)`
 
-Run electrum with the `-g` switch: `electrum -g kivy`
+Run actilectrum with the `-g` switch: `actilectrum -g kivy`

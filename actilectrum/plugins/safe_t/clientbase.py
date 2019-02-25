@@ -123,8 +123,8 @@ class SafeTClientBase(GuiMixin, PrintError):
 
     def has_usable_connection_with_device(self):
         try:
-            res = self.ping("electrum pinging device")
-            assert res == "electrum pinging device"
+            res = self.ping("actilectrum pinging device")
+            assert res == "actilectrum pinging device"
         except BaseException:
             return False
         return True

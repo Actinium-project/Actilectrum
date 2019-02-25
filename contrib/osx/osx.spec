@@ -7,7 +7,7 @@ import sys, os
 PACKAGE='Actilectrum'
 PYPKG='actilectrum'
 MAIN_SCRIPT='run_actilectrum'
-ICONS_FILE='actilectrum.icns'
+ICONS_FILE=PYPKG + '/gui/icons/actilectrum.icns'
 APP_SIGN = os.environ.get('APP_SIGN', '')
 
 def fail(*msg):
@@ -54,7 +54,7 @@ for i, x in enumerate(sys.argv):
 else:
     raise Exception('no version')
 
-electrum = os.path.abspath(".") + "/"
+actilectrum = os.path.abspath(".") + "/"
 block_cipher = None
 
 # see https://github.com/pyinstaller/pyinstaller/issues/2005
@@ -66,11 +66,17 @@ hiddenimports += collect_submodules('keepkeylib')
 hiddenimports += collect_submodules('websocket')
 hiddenimports += collect_submodules('ckcc')
 
+# safetlib imports PyQt5.Qt.  We use a local updated copy of pinmatrix.py until they
+# release a new version that includes https://github.com/archos-safe-t/python-safet/commit/b1eab3dba4c04fdfc1fcf17b66662c28c5f2380e
+hiddenimports.remove('safetlib.qt.pinmatrix')
+
+
 datas = [
-    (electrum + PYPKG + '/*.json', PYPKG),
-    (electrum + PYPKG + '/wordlist/english.txt', PYPKG + '/wordlist'),
-    (electrum + PYPKG + '/locale', PYPKG + '/locale'),
-    (electrum + PYPKG + '/plugins', PYPKG + '/plugins'),
+    (actilectrum + PYPKG + '/*.json', PYPKG),
+    (actilectrum + PYPKG + '/wordlist/english.txt', PYPKG + '/wordlist'),
+    (actilectrum + PYPKG + '/locale', PYPKG + '/locale'),
+    (actilectrum + PYPKG + '/plugins', PYPKG + '/plugins'),
+    (actilectrum + PYPKG + '/gui/icons', PYPKG + '/gui/icons'),
 ]
 datas += collect_data_files('trezorlib')
 datas += collect_data_files('safetlib')
@@ -79,33 +85,34 @@ datas += collect_data_files('keepkeylib')
 datas += collect_data_files('ckcc')
 
 # Add the QR Scanner helper app
-datas += [(electrum + "contrib/osx/CalinsQRReader/build/Release/CalinsQRReader.app", "./contrib/osx/CalinsQRReader/build/Release/CalinsQRReader.app")]
+datas += [(actilectrum + "contrib/osx/CalinsQRReader/build/Release/CalinsQRReader.app", "./contrib/osx/CalinsQRReader/build/Release/CalinsQRReader.app")]
 
 # Add libusb so Trezor and Safe-T mini will work
-binaries = [(electrum + "contrib/osx/libusb-1.0.dylib", ".")]
-binaries += [(electrum + "contrib/osx/libsecp256k1.0.dylib", ".")]
+binaries = [(actilectrum + "contrib/osx/libusb-1.0.dylib", ".")]
+binaries += [(actilectrum + "contrib/osx/libsecp256k1.0.dylib", ".")]
 
 # Workaround for "Retro Look":
 binaries += [b for b in collect_dynamic_libs('PyQt5') if 'macstyle' in b[0]]
 
 # We don't put these files in to actually include them in the script but to make the Analysis method scan them for imports
-a = Analysis([electrum+ MAIN_SCRIPT,
-              electrum+'actilectrum/gui/qt/main_window.py',
-              electrum+'actilectrum/gui/text.py',
-              electrum+'actilectrum/util.py',
-              electrum+'actilectrum/wallet.py',
-              electrum+'actilectrum/simple_config.py',
-              electrum+'actilectrum/bitcoin.py',
-              electrum+'actilectrum/dnssec.py',
-              electrum+'actilectrum/commands.py',
-              electrum+'actilectrum/plugins/cosigner_pool/qt.py',
-              electrum+'actilectrum/plugins/email_requests/qt.py',
-              electrum+'actilectrum/plugins/trezor/qt.py',
-              electrum+'actilectrum/plugins/safe_t/client.py',
-              electrum+'actilectrum/plugins/safe_t/qt.py',
-              electrum+'actilectrum/plugins/keepkey/qt.py',
-              electrum+'actilectrum/plugins/ledger/qt.py',
-              electrum+'actilectrum/plugins/coldcard/qt.py',
+a = Analysis([actilectrum+ MAIN_SCRIPT,
+              actilectrum+'actilectrum/gui/qt/main_window.py',
+              actilectrum+'actilectrum/gui/text.py',
+              actilectrum+'actilectrum/util.py',
+              actilectrum+'actilectrum/wallet.py',
+              actilectrum+'actilectrum/simple_config.py',
+              actilectrum+'actilectrum/bitcoin.py',
+              actilectrum+'actilectrum/blockchain.py',
+              actilectrum+'actilectrum/dnssec.py',
+              actilectrum+'actilectrum/commands.py',
+              actilectrum+'actilectrum/plugins/cosigner_pool/qt.py',
+              actilectrum+'actilectrum/plugins/email_requests/qt.py',
+              actilectrum+'actilectrum/plugins/trezor/qt.py',
+              actilectrum+'actilectrum/plugins/safe_t/client.py',
+              actilectrum+'actilectrum/plugins/safe_t/qt.py',
+              actilectrum+'actilectrum/plugins/keepkey/qt.py',
+              actilectrum+'actilectrum/plugins/ledger/qt.py',
+              actilectrum+'actilectrum/plugins/coldcard/qt.py',
               ],
              binaries=binaries,
              datas=datas,
@@ -127,7 +134,7 @@ for x in a.binaries.copy():
             a.binaries.remove(x)
             print('----> Removed x =', x)
 
-# If code signing, monkey-patch in a code signing step to pyinstaller. See: https://github.com/spesmilo/electrum/issues/4994
+# If code signing, monkey-patch in a code signing step to pyinstaller. See: https://github.com/spesmilo/actilectrum/issues/4994
 if APP_SIGN:
     monkey_patch_pyinstaller_for_codesigning(APP_SIGN)
 
@@ -141,13 +148,13 @@ exe = EXE(pyz,
           debug=False,
           strip=False,
           upx=True,
-          icon=electrum+ICONS_FILE,
+          icon=actilectrum+ICONS_FILE,
           console=False)
 
 app = BUNDLE(exe,
              version = VERSION,
              name=PACKAGE + '.app',
-             icon=electrum+ICONS_FILE,
+             icon=actilectrum+ICONS_FILE,
              bundle_identifier=None,
              info_plist={
                 'NSHighResolutionCapable': 'True',

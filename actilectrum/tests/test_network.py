@@ -49,7 +49,7 @@ class TestNetwork(unittest.TestCase):
         constants.set_mainnet()
 
     def setUp(self):
-        self.config = SimpleConfig({'electrum_path': tempfile.mkdtemp(prefix="test_network")})
+        self.config = SimpleConfig({'actilectrum_path': tempfile.mkdtemp(prefix="test_network")})
         self.interface = MockInterface(self.config)
 
     def test_fork_noconflict(self):

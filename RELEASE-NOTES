@@ -1,3 +1,19 @@
+# Release 3.3.4 - (February 13, 2019)
+
+ * AppImage: we now also distribute self-contained binaries for x86_64
+   Linux in the form of an AppImage (#5042). The Python interpreter,
+   PyQt5, libsecp256k1, PyCryptodomex, zbar, hidapi/libusb (including
+   hardware wallet libraries) are all bundled. Note that users of
+   hw wallets still need to set udev rules themselves.
+ * hw wallets: fix a regression during transaction signing that prompts
+   the user too many times for confirmations (commit 2729909)
+ * transactions now set nVersion to 2, to mimic Bitcoin Core
+ * fix Qt bug that made all hw wallets unusable on Windows 8.1 (#4960)
+ * fix bugs in wallet creation wizard that resulted in corrupted
+   wallets being created in rare cases (#5082, #5057)
+ * fix compatibility with Qt 5.12 (#5109)
+
+
 # Release 3.3.3 - (January 25, 2019)
 
  * Do not expose users to server error messages (#4968)
@@ -245,7 +261,7 @@
    on mainnet. For the mainnet prefixes {x,y,Y,z,Z}|{pub,prv}, the
    corresponding testnet prefixes are   {t,u,U,v,V}|{pub,prv}.
    More details and exact version bytes are specified at:
-   https://github.com/spesmilo/electrum-docs/blob/master/xpub_version_bytes.rst
+   https://github.com/spesmilo/actilectrum-docs/blob/master/xpub_version_bytes.rst
    Note that due to this change, testnet wallet files created with previous
    versions of Actilectrum must be considered broken, and they need to be
    recreated from seed words.
@@ -433,7 +449,7 @@ issue #3374. Users should upgrade to 3.0.5.
     wallet password. Once the wallet is decrypted, only the public key
     is retained in memory, in order to save the encrypted file.
   * The daemon requires wallets to be explicitly loaded before
-    commands can use them. Wallets can be loaded using: 'electrum
+    commands can use them. Wallets can be loaded using: 'actilectrum
     daemon load_wallet [-w path]'. This command will require a
     password if the wallet is encrypted.
   * Invoices and contacts are stored in the wallet file and are no
@@ -737,13 +753,13 @@ issue #3374. Users should upgrade to 3.0.5.
    minimize the number of transaction inputs.
  * Plugins are loaded independently of the GUI. As a result, Openalias,
    TrustedCoin and TREZOR wallets can be used with the command
-   line. Example: 'electrum payto <openalias> <amount>'
+   line. Example: 'actilectrum payto <openalias> <amount>'
  * The command line has been refactored:
   - Arguments are parsed with argparse.
   - The inline help includes a description of options.
   - Some commands have been renamed. Notably, 'mktx' and 'payto' have
     been merged into a single command, with a --broadcast option.
-   Type 'electrum --help' for a complete overview.
+   Type 'actilectrum --help' for a complete overview.
  * The command line accepts the '!' syntax to send the maximum
    amount available. It can be combined with the '--from' option.
    Example: 'payto <destination> ! --from <from_address>'
@@ -753,7 +769,7 @@ issue #3374. Users should upgrade to 3.0.5.
    following commands: 'addrequest', 'rmrequest', 'listrequests'.
    Payment requests can be signed with a SSL certificate, and published
    as bip70 files in a public web directory. To see the relevant
-   configuration variables, type 'electrum addrequest --help'
+   configuration variables, type 'actilectrum addrequest --help'
  * Commands can be called with jsonrpc, using the 'jsonrpc' gui. The
    jsonrpc interface may be called by php.
 
@@ -798,10 +814,10 @@ issue #3374. Users should upgrade to 3.0.5.
  * The network daemon must be started explicitly before using commands
    that require a connection
    Example:
-     electrum daemon start
-     electrum getaddressunspent <addr>
-     electrum daemon status
-     electrum daemon stop
+     actilectrum daemon start
+     actilectrum getaddressunspent <addr>
+     actilectrum daemon status
+     actilectrum daemon stop
    If a daemon is running, the GUI will use it.
 
 # Release 2.0.3 - bugfixes and minor GUI improvements
@@ -831,7 +847,7 @@ issue #3374. Users should upgrade to 3.0.5.
  * Before you upgrade, make sure you have saved your wallet seed on
    paper.
 
- * Documentation is now hosted on a wiki: http://electrum.orain.org
+ * Documentation is now hosted on a wiki: http://actilectrum.orain.org
 
  * New seed derivation method (not compatible with BIP39). The seed
    phrase includes a version number, that refers to the wallet
@@ -878,7 +894,7 @@ issue #3374. Users should upgrade to 3.0.5.
  * The 'Send' tab in the Qt GUI supports transactions with multiple
    outputs, and raw hexadecimal scripts.
 
- * The GUI can connect to the Actilectrum daemon: "electrum -d" will
+ * The GUI can connect to the Actilectrum daemon: "actilectrum -d" will
    start the daemon if it is not already running, and the GUI will
    connect to it. The daemon can serve several clients. It times out
    if no client uses if for more than 5 minutes.
@@ -920,7 +936,7 @@ issue #3374. Users should upgrade to 3.0.5.
   a daemon, that remains connected and handles subsequent
   commands. The daemon terminates itself if it remains unused for more
   than one minute. The purpose of this is to make scripting more
-  efficient. For example, a bash script using many electrum commands
+  efficient. For example, a bash script using many actilectrum commands
   will open only one connection.
 
 # Release 1.9.7
@@ -1028,7 +1044,7 @@ versions of Actilectrum.
 
 * An interactive Python console replaces the 'Wall' tab. The provided
 python environment gives users access to the wallet and gui. Most
-electrum commands are available as python function in the
+actilectrum commands are available as python function in the
 console. Custom scripts an be loaded with a "run(filename)"
 command. Tab-completions are available.
 

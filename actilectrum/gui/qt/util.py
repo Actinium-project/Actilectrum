@@ -5,20 +5,24 @@ import sys
 import platform
 import queue
 import traceback
-from distutils.version import LooseVersion
-from functools import partial
-from typing import NamedTuple, Callable, Optional, TYPE_CHECKING
-import base64
 
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
+from functools import partial, lru_cache
+from typing import NamedTuple, Callable, Optional, TYPE_CHECKING, Union, List, Dict
 
-from actilectrum import version
-from actilectrum import ecc
-from actilectrum import constants
+from PyQt5.QtGui import (QFont, QColor, QCursor, QPixmap, QStandardItem,
+                         QPalette, QIcon)
+from PyQt5.QtCore import (Qt, QPersistentModelIndex, QModelIndex, pyqtSignal,
+                          QCoreApplication, QItemSelectionModel, QThread,
+                          QSortFilterProxyModel, QSize, QLocale)
+from PyQt5.QtWidgets import (QPushButton, QLabel, QMessageBox, QHBoxLayout,
+                             QAbstractItemView, QVBoxLayout, QLineEdit,
+                             QStyle, QDialog, QGroupBox, QButtonGroup, QRadioButton,
+                             QFileDialog, QWidget, QToolButton, QTreeView, QPlainTextEdit,
+                             QHeaderView, QApplication, QToolTip, QTreeWidget, QStyledItemDelegate)
+
 from actilectrum.i18n import _, languages
-from actilectrum.util import FileImportFailed, FileExportFailed, make_aiohttp_session, PrintError
+from actilectrum.util import (FileImportFailed, FileExportFailed,
+                               resource_path)
 from actilectrum.paymentrequest import PR_UNPAID, PR_PAID, PR_EXPIRED
 
 if TYPE_CHECKING:
@@ -36,9 +40,9 @@ else:
 dialogs = []
 
 pr_icons = {
-    PR_UNPAID:":icons/unpaid.png",
-    PR_PAID:":icons/confirmed.png",
-    PR_EXPIRED:":icons/expired.png"
+    PR_UNPAID:"unpaid.png",
+    PR_PAID:"confirmed.png",
+    PR_EXPIRED:"expired.png"
 }
 
 pr_tooltips = {
@@ -429,8 +433,6 @@ class MyTreeView(QTreeView):
         self.customContextMenuRequested.connect(create_menu)
         self.setUniformRowHeights(True)
 
-        self.icon_cache = IconCache()
-
         # Control which columns are editable
         if editable_columns is None:
             editable_columns = {stretch_column}
@@ -471,13 +473,17 @@ class MyTreeView(QTreeView):
             assert set_current.isValid()
             self.selectionModel().select(QModelIndex(set_current), QItemSelectionModel.SelectCurrent)
 
-    def update_headers(self, headers):
+    def update_headers(self, headers: Union[List[str], Dict[int, str]]):
+        # headers is either a list of column names, or a dict: (col_idx->col_name)
+        if not isinstance(headers, dict):  # convert to dict
+            headers = dict(enumerate(headers))
+        col_names = [headers[col_idx] for col_idx in sorted(headers.keys())]
         model = self.model()
-        model.setHorizontalHeaderLabels(headers)
+        model.setHorizontalHeaderLabels(col_names)
         self.header().setStretchLastSection(False)
-        for col in range(len(headers)):
-            sm = QHeaderView.Stretch if col == self.stretch_column else QHeaderView.ResizeToContents
-            self.header().setSectionResizeMode(col, sm)
+        for col_idx in headers:
+            sm = QHeaderView.Stretch if col_idx == self.stretch_column else QHeaderView.ResizeToContents
+            self.header().setSectionResizeMode(col_idx, sm)
 
     def keyPressEvent(self, event):
         if self.itemDelegate().opened:
@@ -599,8 +605,9 @@ class ButtonsWidget(QWidget):
 
     def addButton(self, icon_name, on_click, tooltip):
         button = QToolButton(self)
-        button.setIcon(QIcon(icon_name))
+        button.setIcon(read_QIcon(icon_name))
         button.setIconSize(QSize(25,25))
+        button.setCursor(QCursor(Qt.PointingHandCursor))
         button.setStyleSheet("QToolButton { border: none; hover {border: 1px} pressed {border: 1px} padding: 0px; }")
         button.setVisible(True)
         button.setToolTip(tooltip)
@@ -610,7 +617,7 @@ class ButtonsWidget(QWidget):
 
     def addCopyButton(self, app):
         self.app = app
-        self.addButton(":icons/copy.png", self.on_copy, _("Copy to clipboard"))
+        self.addButton("copy.png", self.on_copy, _("Copy to clipboard"))
 
     def on_copy(self):
         self.app.clipboard().setText(self.text())
@@ -754,32 +761,32 @@ class AcceptFileDragDrop:
         raise NotImplementedError()
 
 
-def import_meta_gui(electrum_window, title, importer, on_success):
+def import_meta_gui(actilectrum_window, title, importer, on_success):
     filter_ = "JSON (*.json);;All files (*)"
-    filename = electrum_window.getOpenFileName(_("Open {} file").format(title), filter_)
+    filename = actilectrum_window.getOpenFileName(_("Open {} file").format(title), filter_)
     if not filename:
         return
     try:
         importer(filename)
     except FileImportFailed as e:
-        electrum_window.show_critical(str(e))
+        actilectrum_window.show_critical(str(e))
     else:
-        electrum_window.show_message(_("Your {} were successfully imported").format(title))
+        actilectrum_window.show_message(_("Your {} were successfully imported").format(title))
         on_success()
 
 
-def export_meta_gui(electrum_window, title, exporter):
+def export_meta_gui(actilectrum_window, title, exporter):
     filter_ = "JSON (*.json);;All files (*)"
-    filename = electrum_window.getSaveFileName(_("Select file to save your {}").format(title),
+    filename = actilectrum_window.getSaveFileName(_("Select file to save your {}").format(title),
                                                'actilectrum_{}.json'.format(title), filter_)
     if not filename:
         return
     try:
         exporter(filename)
     except FileExportFailed as e:
-        electrum_window.show_critical(str(e))
+        actilectrum_window.show_critical(str(e))
     else:
-        electrum_window.show_message(_("Your {0} were exported to '{1}'")
+        actilectrum_window.show_message(_("Your {0} were exported to '{1}'")
                                      .format(title, str(filename)))
 
 
@@ -795,15 +802,14 @@ def get_parent_main_window(widget):
             return widget
     return None
 
-class IconCache:
 
-    def __init__(self):
-        self.__cache = {}
+def icon_path(icon_basename):
+    return resource_path('gui', 'icons', icon_basename)
 
-    def get(self, file_name):
-        if file_name not in self.__cache:
-            self.__cache[file_name] = QIcon(file_name)
-        return self.__cache[file_name]
+
+@lru_cache(maxsize=1000)
+def read_QIcon(icon_basename):
+    return QIcon(icon_path(icon_basename))
 
 
 def get_default_language():
@@ -827,6 +833,7 @@ class FromList(QTreeWidget):
         self.header().setSectionResizeMode(1, sm)
 
 
+<<<<<<< HEAD:actilectrum/gui/qt/util.py
 class UpdateCheck(QWidget, PrintError):
     url = "https://actilectrum.org/version"
     download_url = "https://actilectrum.org/#download"
@@ -944,6 +951,8 @@ class UpdateCheckThread(QThread, PrintError):
             self.failed.emit()
 
 
+=======
+>>>>>>> 2ca726622203be7c4d6c8f8cd6ae7c4bef0de1a2:actilectrum/gui/qt/util.py
 if __name__ == "__main__":
     app = QApplication([])
     t = WaitingDialog(None, 'testing ...', lambda: [time.sleep(1)], lambda x: QMessageBox.information(None, 'done', "done"))

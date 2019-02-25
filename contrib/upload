@@ -9,7 +9,7 @@ here=$(dirname "$0")
 cd $here/../dist
 
 sftp -oBatchMode=no -b - Actinium-project@actilectrum.org << !
-   cd electrum-downloads
+   cd actilectrum-downloads
    mkdir $version
    cd $version
    mput *

@@ -43,7 +43,8 @@ from aiohttp import ClientResponse
 
 from . import util
 from .util import (PrintError, print_error, log_exceptions, ignore_exceptions,
-                   bfh, SilentTaskGroup, make_aiohttp_session)
+                   bfh, SilentTaskGroup, make_aiohttp_session, send_exception_to_crash_reporter,
+                   is_hash256_str, is_non_negative_integer)
 
 from .bitcoin import COIN
 from . import constants
@@ -188,11 +189,29 @@ class TxBroadcastServerReturnedError(TxBroadcastError):
                     str(self))
 
 
+class TxBroadcastUnknownError(TxBroadcastError):
+    def get_message_for_gui(self):
+        return "{}\n{}" \
+            .format(_("Unknown error when broadcasting the transaction."),
+                    _("Consider trying to connect to a different server, or updating Electrum."))
+
+
+class UntrustedServerReturnedError(Exception):
+    def __init__(self, *, original_exception):
+        self.original_exception = original_exception
+
+    def __str__(self):
+        return _("The server returned an error.")
+
+    def __repr__(self):
+        return f"<UntrustedServerReturnedError original_exception: {repr(self.original_exception)}>"
+
+
 INSTANCE = None
 
 
 class Network(PrintError):
-    """The Network class manages a set of connections to remote electrum
+    """The Network class manages a set of connections to remote actilectrum
     servers, each connected socket is handled by an Interface() object.
     """
     verbosity_filter = 'n'
@@ -256,6 +275,9 @@ class Network(PrintError):
         self.connecting = set()
         self.server_queue = None
         self.proxy = None
+
+        # Dump network messages (all interfaces).  Set at runtime from the console.
+        self.debug = False
 
         self._set_status('disconnected')
 
@@ -438,7 +460,7 @@ class Network(PrintError):
     @with_recent_servers_lock
     def get_servers(self):
         # start with hardcoded servers
-        out = constants.net.DEFAULT_SERVERS
+        out = dict(constants.net.DEFAULT_SERVERS)  # copy
         # add recent servers
         for s in self.recent_servers:
             try:
@@ -753,8 +775,21 @@ class Network(PrintError):
             raise BestEffortRequestFailed('no interface to do request on... gave up.')
         return make_reliable_wrapper
 
+    def catch_server_exceptions(func):
+        async def wrapper(self, *args, **kwargs):
+            try:
+                return await func(self, *args, **kwargs)
+            except aiorpcx.jsonrpc.CodeMessageError as e:
+                raise UntrustedServerReturnedError(original_exception=e)
+        return wrapper
+
     @best_effort_reliable
+    @catch_server_exceptions
     async def get_merkle_for_transaction(self, tx_hash: str, tx_height: int) -> dict:
+        if not is_hash256_str(tx_hash):
+            raise Exception(f"{repr(tx_hash)} is not a txid")
+        if not is_non_negative_integer(tx_height):
+            raise Exception(f"{repr(tx_height)} is not a block height")
         return await self.interface.session.send_request('blockchain.transaction.get_merkle', [tx_hash, tx_height])
 
     @best_effort_reliable
@@ -764,9 +799,15 @@ class Network(PrintError):
         try:
             out = await self.interface.session.send_request('blockchain.transaction.broadcast', [str(tx)], timeout=timeout)
             # note: both 'out' and exception messages are untrusted input from the server
-        except aiorpcx.jsonrpc.RPCError as e:
+        except (RequestTimedOut, asyncio.CancelledError, asyncio.TimeoutError):
+            raise  # pass-through
+        except aiorpcx.jsonrpc.CodeMessageError as e:
             self.print_error(f"broadcast_transaction error: {repr(e)}")
             raise TxBroadcastServerReturnedError(self.sanitize_tx_broadcast_response(e.message)) from e
+        except BaseException as e:  # intentional BaseException for sanity!
+            self.print_error(f"broadcast_transaction error2: {repr(e)}")
+            send_exception_to_crash_reporter(e)
+            raise TxBroadcastUnknownError() from e
         if out != tx.txid():
             self.print_error(f"unexpected txid for broadcast_transaction: {out} != {tx.txid()}")
             raise TxBroadcastHashMismatch(_("Server returned unexpected transaction ID."))
@@ -782,7 +823,7 @@ class Network(PrintError):
         # grep "reason ="
         policy_error_messages = {
             r"version": _("Transaction uses non-standard version."),
-            r"tx-size": _("The transaction was rejected because it is too large."),
+            r"tx-size": _("The transaction was rejected because it is too large (in bytes)."),
             r"scriptsig-size": None,
             r"scriptsig-not-pushonly": None,
             r"scriptpubkey": None,
@@ -906,24 +947,39 @@ class Network(PrintError):
         return _("Unknown error")
 
     @best_effort_reliable
-    async def request_chunk(self, height, tip=None, *, can_return_early=False):
+    @catch_server_exceptions
+    async def request_chunk(self, height: int, tip=None, *, can_return_early=False):
+        if not is_non_negative_integer(height):
+            raise Exception(f"{repr(height)} is not a block height")
         return await self.interface.request_chunk(height, tip=tip, can_return_early=can_return_early)
 
     @best_effort_reliable
+    @catch_server_exceptions
     async def get_transaction(self, tx_hash: str, *, timeout=None) -> str:
+        if not is_hash256_str(tx_hash):
+            raise Exception(f"{repr(tx_hash)} is not a txid")
         return await self.interface.session.send_request('blockchain.transaction.get', [tx_hash],
                                                          timeout=timeout)
 
     @best_effort_reliable
+    @catch_server_exceptions
     async def get_history_for_scripthash(self, sh: str) -> List[dict]:
+        if not is_hash256_str(sh):
+            raise Exception(f"{repr(sh)} is not a scripthash")
         return await self.interface.session.send_request('blockchain.scripthash.get_history', [sh])
 
     @best_effort_reliable
+    @catch_server_exceptions
     async def listunspent_for_scripthash(self, sh: str) -> List[dict]:
+        if not is_hash256_str(sh):
+            raise Exception(f"{repr(sh)} is not a scripthash")
         return await self.interface.session.send_request('blockchain.scripthash.listunspent', [sh])
 
     @best_effort_reliable
+    @catch_server_exceptions
     async def get_balance_for_scripthash(self, sh: str) -> dict:
+        if not is_hash256_str(sh):
+            raise Exception(f"{repr(sh)} is not a scripthash")
         return await self.interface.session.send_request('blockchain.scripthash.get_balance', [sh])
 
     def blockchain(self) -> Blockchain:
@@ -1121,3 +1177,35 @@ class Network(PrintError):
         assert network._loop_thread is not threading.currentThread()
         coro = asyncio.run_coroutine_threadsafe(network._send_http_on_proxy(method, url, **kwargs), network.asyncio_loop)
         return coro.result(5)
+
+
+
+    # methods used in scripts
+    async def get_peers(self):
+        while not self.is_connected():
+            await asyncio.sleep(1)
+        session = self.interface.session
+        return parse_servers(await session.send_request('server.peers.subscribe'))
+
+    async def send_multiple_requests(self, servers: List[str], method: str, params: Sequence):
+        num_connecting = len(self.connecting)
+        for server in servers:
+            self._start_interface(server)
+        # sleep a bit
+        for _ in range(10):
+            if len(self.connecting) < num_connecting:
+                break
+            await asyncio.sleep(1)
+        responses = dict()
+        async def get_response(iface: Interface):
+            try:
+                res = await iface.session.send_request(method, params, timeout=10)
+            except Exception as e:
+                res = e
+            responses[iface.server] = res
+        async with TaskGroup() as group:
+            for server in servers:
+                interface = self.interfaces.get(server)
+                if interface:
+                    await group.spawn(get_response(interface))
+        return responses

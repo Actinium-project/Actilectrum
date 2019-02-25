@@ -32,11 +32,11 @@ from .util import bfh, bh2u
 from .simple_config import SimpleConfig
 
 try:
-    import scrypt
-    getPoWHash = lambda x: scrypt.hash(x, x, N=1024, r=1, p=1, buflen=32)
+    # import scrypt
+    # getPoWHash = lambda x: scrypt.hash(x, x, N=1024, r=1, p=1, buflen=32)
 except ImportError:
     util.print_msg("Warning: package scrypt not available; synchronization could be very slow")
-    from .scrypt import scrypt_1024_1_1_80 as getPoWHash
+    # from .scrypt import scrypt_1024_1_1_80 as getPoWHash
 
 
 HEADER_SIZE = 80  # bytes
@@ -86,7 +86,8 @@ def hash_raw_header(header: str) -> str:
     return hash_encode(sha256d(bfh(header)))
 
 def pow_hash_header(header):
-    return hash_encode(getPoWHash(bfh(serialize_header(header))))
+    pass
+    # return hash_encode(getPoWHash(bfh(serialize_header(header))))
 
 
 # key: blockhash hex at forkpoint
@@ -265,7 +266,7 @@ class Blockchain(util.PrintError):
     def verify_header(cls, header: dict, prev_hash: str, target: int, expected_header_hash: str=None) -> None:
         return # no verify
         _hash = hash_header(header)
-        _powhash = pow_hash_header(header)
+        # _powhash = pow_hash_header(header)
         if expected_header_hash and expected_header_hash != _hash:
             raise Exception("hash mismatches with expected: {} vs {}".format(expected_header_hash, _hash))
         if prev_hash != header.get('prev_block_hash'):

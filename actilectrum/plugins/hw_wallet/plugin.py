@@ -26,9 +26,9 @@
 
 from actilectrum.plugin import BasePlugin, hook
 from actilectrum.i18n import _
-from actilectrum.bitcoin import is_address, TYPE_SCRIPT
+from actilectrum.bitcoin import is_address, TYPE_SCRIPT, opcodes
 from actilectrum.util import bfh, versiontuple, UserFacingException
-from actilectrum.transaction import opcodes, TxOutput, Transaction
+from actilectrum.transaction import TxOutput, Transaction
 
 
 class HW_PluginBase(BasePlugin):

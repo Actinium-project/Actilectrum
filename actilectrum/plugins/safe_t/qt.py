@@ -1,11 +1,15 @@
 from functools import partial
 import threading
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QGridLayout, QInputDialog, QPushButton
-from PyQt5.QtWidgets import QVBoxLayout, QLabel
+from PyQt5.QtCore import Qt, pyqtSignal, QRegExp
+from PyQt5.QtGui import QRegExpValidator
+from PyQt5.QtWidgets import (QVBoxLayout, QLabel, QGridLayout, QPushButton,
+                             QHBoxLayout, QButtonGroup, QGroupBox,
+                             QTextEdit, QLineEdit, QRadioButton, QCheckBox, QWidget,
+                             QMessageBox, QFileDialog, QSlider, QTabWidget)
 
-from actilectrum.gui.qt.util import *
+from actilectrum.gui.qt.util import (WindowModalDialog, WWLabel, Buttons, CancelButton,
+                                      OkButton, CloseButton)
 from actilectrum.i18n import _
 from actilectrum.plugin import hook
 from actilectrum.util import bh2u
@@ -169,12 +173,15 @@ class QtPlugin(QtPluginBase):
 
 
 class Plugin(SafeTPlugin, QtPlugin):
-    icon_unpaired = ":icons/safe-t_unpaired.png"
-    icon_paired = ":icons/safe-t.png"
+    icon_unpaired = "safe-t_unpaired.png"
+    icon_paired = "safe-t.png"
 
     @classmethod
     def pin_matrix_widget_class(self):
-        from safetlib.qt.pinmatrix import PinMatrixWidget
+        # We use a local updated copy of pinmatrix.py until safetlib
+        # releases a new version that includes https://github.com/archos-safe-t/python-safet/commit/b1eab3dba4c04fdfc1fcf17b66662c28c5f2380e
+        # from safetlib.qt.pinmatrix import PinMatrixWidget
+        from .pinmatrix import PinMatrixWidget
         return PinMatrixWidget
 
 

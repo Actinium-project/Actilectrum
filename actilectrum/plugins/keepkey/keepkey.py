@@ -4,7 +4,7 @@ import sys
 
 from actilectrum.util import bfh, bh2u, UserCancelled, UserFacingException
 from actilectrum.bitcoin import TYPE_ADDRESS, TYPE_SCRIPT
-from actilectrum.bip32 import deserialize_xpub
+from actilectrum.bip32 import BIP32Node
 from actilectrum import constants
 from actilectrum.i18n import _
 from actilectrum.transaction import deserialize, Transaction
@@ -206,6 +206,8 @@ class KeepKeyPlugin(HW_PluginBase):
         language = 'english'
         devmgr = self.device_manager()
         client = devmgr.client_by_id(device_id)
+        if not client:
+            raise Exception(_("The device was disconnected."))
 
         if method == TIM_NEW:
             strength = 64 * (item + 2)  # 128, 192 or 256
@@ -227,13 +229,13 @@ class KeepKeyPlugin(HW_PluginBase):
                                        label, language)
 
     def _make_node_path(self, xpub, address_n):
-        _, depth, fingerprint, child_num, chain_code, key = deserialize_xpub(xpub)
+        bip32node = BIP32Node.from_xkey(xpub)
         node = self.types.HDNodeType(
-            depth=depth,
-            fingerprint=int.from_bytes(fingerprint, 'big'),
-            child_num=int.from_bytes(child_num, 'big'),
-            chain_code=chain_code,
-            public_key=key,
+            depth=bip32node.depth,
+            fingerprint=int.from_bytes(bip32node.fingerprint, 'big'),
+            child_num=int.from_bytes(bip32node.child_number, 'big'),
+            chain_code=bip32node.chaincode,
+            public_key=bip32node.eckey.get_public_key_bytes(compressed=True),
         )
         return self.types.HDNodePathType(node=node, address_n=address_n)
 
@@ -261,27 +263,27 @@ class KeepKeyPlugin(HW_PluginBase):
         client.used()
         return xpub
 
-    def get_keepkey_input_script_type(self, electrum_txin_type: str):
-        if electrum_txin_type in ('p2wpkh', 'p2wsh'):
+    def get_keepkey_input_script_type(self, actilectrum_txin_type: str):
+        if actilectrum_txin_type in ('p2wpkh', 'p2wsh'):
             return self.types.SPENDWITNESS
-        if electrum_txin_type in ('p2wpkh-p2sh', 'p2wsh-p2sh'):
+        if actilectrum_txin_type in ('p2wpkh-p2sh', 'p2wsh-p2sh'):
             return self.types.SPENDP2SHWITNESS
-        if electrum_txin_type in ('p2pkh', ):
+        if actilectrum_txin_type in ('p2pkh', ):
             return self.types.SPENDADDRESS
-        if electrum_txin_type in ('p2sh', ):
+        if actilectrum_txin_type in ('p2sh', ):
             return self.types.SPENDMULTISIG
-        raise ValueError('unexpected txin type: {}'.format(electrum_txin_type))
+        raise ValueError('unexpected txin type: {}'.format(actilectrum_txin_type))
 
-    def get_keepkey_output_script_type(self, electrum_txin_type: str):
-        if electrum_txin_type in ('p2wpkh', 'p2wsh'):
+    def get_keepkey_output_script_type(self, actilectrum_txin_type: str):
+        if actilectrum_txin_type in ('p2wpkh', 'p2wsh'):
             return self.types.PAYTOWITNESS
-        if electrum_txin_type in ('p2wpkh-p2sh', 'p2wsh-p2sh'):
+        if actilectrum_txin_type in ('p2wpkh-p2sh', 'p2wsh-p2sh'):
             return self.types.PAYTOP2SHWITNESS
-        if electrum_txin_type in ('p2pkh', ):
+        if actilectrum_txin_type in ('p2pkh', ):
             return self.types.PAYTOADDRESS
-        if electrum_txin_type in ('p2sh', ):
+        if actilectrum_txin_type in ('p2sh', ):
             return self.types.PAYTOMULTISIG
-        raise ValueError('unexpected txin type: {}'.format(electrum_txin_type))
+        raise ValueError('unexpected txin type: {}'.format(actilectrum_txin_type))
 
     def sign_transaction(self, keystore, tx, prev_tx, xpub_path):
         self.prev_tx = prev_tx
@@ -289,7 +291,8 @@ class KeepKeyPlugin(HW_PluginBase):
         client = self.get_client(keystore)
         inputs = self.tx_inputs(tx, True)
         outputs = self.tx_outputs(keystore.get_derivation(), tx)
-        signatures = client.sign_tx(self.get_coin_name(), inputs, outputs, lock_time=tx.locktime)[0]
+        signatures = client.sign_tx(self.get_coin_name(), inputs, outputs,
+                                    lock_time=tx.locktime, version=tx.version)[0]
         signatures = [(bh2u(x) + '01') for x in signatures]
         tx.update_signatures(signatures)
 
@@ -445,7 +448,7 @@ class KeepKeyPlugin(HW_PluginBase):
 
         return outputs
 
-    def electrum_tx_to_txtype(self, tx):
+    def actilectrum_tx_to_txtype(self, tx):
         t = self.types.TransactionType()
         if tx is None:
             # probably for segwit input and we don't need this prev txn
@@ -464,4 +467,4 @@ class KeepKeyPlugin(HW_PluginBase):
     # This function is called from the TREZOR libraries (via tx_api)
     def get_tx(self, tx_hash):
         tx = self.prev_tx[tx_hash]
-        return self.electrum_tx_to_txtype(tx)
+        return self.actilectrum_tx_to_txtype(tx)
