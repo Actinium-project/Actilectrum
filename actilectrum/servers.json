@@ -1,11 +1,11 @@
 {
-    "actilectrum1.actinium.org": {
+    "electrum1.actinium.org": {
         "pruning": "-",
         "s": "50002",
         "t": "50001",
         "version": "1.1"
     },
-    "actilectrum2.actinium.org": {
+    "electrum2.actinium.org": {
         "pruning": "-",
         "s": "50002",
         "t": "50001",
