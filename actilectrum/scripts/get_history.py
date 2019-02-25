@@ -11,7 +11,7 @@ from actilectrum.util import json_encode, print_msg, create_and_start_event_loop
 try:
     addr = sys.argv[1]
 except Exception:
-    print("usage: get_history <litecoin_address>")
+    print("usage: get_history <actinium_address>")
     sys.exit(1)
 
 loop, stopping_fut, loop_thread = create_and_start_event_loop()

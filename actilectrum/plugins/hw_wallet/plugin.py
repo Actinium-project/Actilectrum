@@ -1,8 +1,8 @@
 #!/usr/bin/env python2
 # -*- mode: python -*-
 #
-# Actilectrum - lightweight Bitcoin client
-# Copyright (C) 2016  The Actilectrum developers
+# Electrum - lightweight Bitcoin client
+# Copyright (C) 2016  The Electrum developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -26,9 +26,9 @@
 
 from actilectrum.plugin import BasePlugin, hook
 from actilectrum.i18n import _
-from actilectrum.bitcoin import is_address, TYPE_SCRIPT, opcodes
+from actilectrum.bitcoin import is_address, TYPE_SCRIPT
 from actilectrum.util import bfh, versiontuple, UserFacingException
-from actilectrum.transaction import TxOutput, Transaction
+from actilectrum.transaction import opcodes, TxOutput, Transaction
 
 
 class HW_PluginBase(BasePlugin):

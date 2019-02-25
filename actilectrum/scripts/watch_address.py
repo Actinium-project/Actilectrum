@@ -11,7 +11,7 @@ from actilectrum.synchronizer import SynchronizerBase
 try:
     addr = sys.argv[1]
 except Exception:
-    print("usage: watch_address <litecoin_address>")
+    print("usage: watch_address <actinium_address>")
     sys.exit(1)
 
 # start network

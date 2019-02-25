@@ -93,9 +93,6 @@ class TestUtil(SequentialTestCase):
         self.assertRaises(BaseException, parse_URI, 'notlitecoin:LectrumELqJWMECz7W2iarBpT4VvAPqwAv')
 
     def test_parse_URI_parameter_polution(self):
-<<<<<<< HEAD:actilectrum/tests/test_util.py
-        self.assertRaises(Exception, parse_URI, 'actinium:LectrumELqJWMECz7W2iarBpT4VvAPqwAv?amount=0.0003&label=test&amount=30.0')
-=======
         self.assertRaises(Exception, parse_URI, 'litecoin:LectrumELqJWMECz7W2iarBpT4VvAPqwAv?amount=0.0003&label=test&amount=30.0')
 
     def test_is_hash256_str(self):
@@ -107,4 +104,3 @@ class TestUtil(SequentialTestCase):
         self.assertFalse(is_hash256_str('qweqwe'))
         self.assertFalse(is_hash256_str(None))
         self.assertFalse(is_hash256_str(7))
->>>>>>> 2ca726622203be7c4d6c8f8cd6ae7c4bef0de1a2:actilectrum/tests/test_util.py
