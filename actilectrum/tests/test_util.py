@@ -93,7 +93,7 @@ class TestUtil(SequentialTestCase):
         self.assertRaises(BaseException, parse_URI, 'notlitecoin:LectrumELqJWMECz7W2iarBpT4VvAPqwAv')
 
     def test_parse_URI_parameter_polution(self):
-        self.assertRaises(Exception, parse_URI, 'litecoin:LectrumELqJWMECz7W2iarBpT4VvAPqwAv?amount=0.0003&label=test&amount=30.0')
+        self.assertRaises(Exception, parse_URI, 'actinium:LectrumELqJWMECz7W2iarBpT4VvAPqwAv?amount=0.0003&label=test&amount=30.0')
 
     def test_is_hash256_str(self):
         self.assertTrue(is_hash256_str('09a4c03e3bdf83bbe3955f907ee52da4fc12f4813d459bc75228b64ad08617c7'))

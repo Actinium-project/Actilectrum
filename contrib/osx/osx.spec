@@ -54,7 +54,7 @@ for i, x in enumerate(sys.argv):
 else:
     raise Exception('no version')
 
-actilectrum = os.path.abspath(".") + "/"
+electrum = os.path.abspath(".") + "/"
 block_cipher = None
 
 # see https://github.com/pyinstaller/pyinstaller/issues/2005
@@ -71,12 +71,6 @@ hiddenimports += ['_scrypt', 'PyQt5.QtPrintSupport']  # needed by Revealer
 # release a new version that includes https://github.com/archos-safe-t/python-safet/commit/b1eab3dba4c04fdfc1fcf17b66662c28c5f2380e
 hiddenimports.remove('safetlib.qt.pinmatrix')
 
-
-# safetlib imports PyQt5.Qt.  We use a local updated copy of pinmatrix.py until they
-# release a new version that includes https://github.com/archos-safe-t/python-safet/commit/b1eab3dba4c04fdfc1fcf17b66662c28c5f2380e
-hiddenimports.remove('safetlib.qt.pinmatrix')
-
-
 datas = [
     (electrum + PYPKG + '/*.json', PYPKG),
     (electrum + PYPKG + '/wordlist/english.txt', PYPKG + '/wordlist'),
@@ -91,11 +85,11 @@ datas += collect_data_files('keepkeylib')
 datas += collect_data_files('ckcc')
 
 # Add the QR Scanner helper app
-datas += [(actilectrum + "contrib/osx/CalinsQRReader/build/Release/CalinsQRReader.app", "./contrib/osx/CalinsQRReader/build/Release/CalinsQRReader.app")]
+datas += [(electrum + "contrib/osx/CalinsQRReader/build/Release/CalinsQRReader.app", "./contrib/osx/CalinsQRReader/build/Release/CalinsQRReader.app")]
 
 # Add libusb so Trezor and Safe-T mini will work
-binaries = [(actilectrum + "contrib/osx/libusb-1.0.dylib", ".")]
-binaries += [(actilectrum + "contrib/osx/libsecp256k1.0.dylib", ".")]
+binaries = [(electrum + "contrib/osx/libusb-1.0.dylib", ".")]
+binaries += [(electrum + "contrib/osx/libsecp256k1.0.dylib", ".")]
 
 # Workaround for "Retro Look":
 binaries += [b for b in collect_dynamic_libs('PyQt5') if 'macstyle' in b[0]]
@@ -154,13 +148,13 @@ exe = EXE(pyz,
           debug=False,
           strip=False,
           upx=True,
-          icon=actilectrum+ICONS_FILE,
+          icon=electrum+ICONS_FILE,
           console=False)
 
 app = BUNDLE(exe,
              version = VERSION,
              name=PACKAGE + '.app',
-             icon=actilectrum+ICONS_FILE,
+             icon=electrum+ICONS_FILE,
              bundle_identifier=None,
              info_plist={
                 'NSHighResolutionCapable': 'True',
