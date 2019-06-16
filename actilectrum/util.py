@@ -65,9 +65,9 @@ def inv_dict(d):
 ca_path = certifi.where()
 
 
-base_units = {'ACM':8, 'mLTC':5, 'uLTC':2, 'sat':0}
+base_units = {'ACM':8, 'mACM':5, 'uACM':2, 'sat':0}
 base_units_inverse = inv_dict(base_units)
-base_units_list = ['ACM', 'mLTC', 'uLTC', 'sat']  # list(dict) does not guarantee order
+base_units_list = ['ACM', 'mACM', 'uACM', 'sat']  # list(dict) does not guarantee order
 
 DECIMAL_POINT_DEFAULT = 8  # ACM
 
@@ -655,12 +655,12 @@ mainnet_block_explorers = {
 }
 
 testnet_block_explorers = {
-    'Bitaps.com': ('https://tltc.bitaps.com/',
+    'Bitaps.com': ('https://tacm.bitaps.com/',
                        {'tx': '', 'addr': ''}),
     'LiteCore': ('https://testnet.litecore.io/',
                         {'tx': 'tx/', 'addr': 'address/'}),
     'SoChain': ('https://chain.so/',
-                        {'tx': 'tx/LTCTEST/', 'addr': 'address/LTCTEST/'}),
+                        {'tx': 'tx/ACMTEST/', 'addr': 'address/ACMTEST/'}),
     'system default': ('blockchain://4966625a4b2851d9fdee139e56211a0d88575f59ed816ff5e6a63deb4e3e29a0/',
                        {'tx': 'tx/', 'addr': 'address/'}),
 }
