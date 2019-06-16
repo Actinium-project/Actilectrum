@@ -202,7 +202,7 @@ class TxBroadcastUnknownError(TxBroadcastError):
     def get_message_for_gui(self):
         return "{}\n{}" \
             .format(_("Unknown error when broadcasting the transaction."),
-                    _("Consider trying to connect to a different server, or updating Electrum."))
+                    _("Consider trying to connect to a different server, or updating Actilectrum."))
 
 
 class UntrustedServerReturnedError(Exception):

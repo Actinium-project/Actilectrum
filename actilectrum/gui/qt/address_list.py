@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Actilectrum - lightweight Bitcoin client
+# Electrum - lightweight Bitcoin client
 # Copyright (C) 2015 Thomas Voegtlin
 #
 # Permission is hereby granted, free of charge, to any person
@@ -30,7 +30,11 @@ from PyQt5.QtCore import Qt, QPersistentModelIndex, QModelIndex
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QFont
 from PyQt5.QtWidgets import QAbstractItemView, QComboBox, QLabel, QMenu
 
-from .util import MyTreeView, MONOSPACE_FONT, ColorScheme
+from actilectrum.i18n import _
+from actilectrum.util import block_explorer_URL
+from actilectrum.plugin import run_hook
+from actilectrum.bitcoin import is_address
+from actilectrum.wallet import InternalAddressCorruption
 
 from .util import MyTreeView, MONOSPACE_FONT, ColorScheme
 
