@@ -5,15 +5,9 @@ import sys
 from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtWidgets import (QHBoxLayout, QLabel, QVBoxLayout)
 
-<<<<<<< HEAD:actilectrum/plugins/labels/qt.py
 from actilectrum.plugin import hook
 from actilectrum.i18n import _
 from actilectrum.gui.qt.util import ThreadedButton, Buttons, EnterButton, WindowModalDialog, OkButton
-=======
-from actilectrum.plugin import hook
-from actilectrum.i18n import _
-from actilectrum.gui.qt.util import ThreadedButton, Buttons, EnterButton, WindowModalDialog, OkButton
->>>>>>> ad97651960f7f70c77bc4722e688cccc43c8075c:actilectrum/plugins/labels/qt.py
 
 from .labels import LabelsPlugin
 
