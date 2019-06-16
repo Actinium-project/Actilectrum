@@ -37,8 +37,6 @@ from actilectrum.wallet import InternalAddressCorruption
 
 from .util import MyTreeView, pr_tooltips, pr_icons, read_QIcon
 
-from .util import MyTreeView, pr_tooltips, pr_icons, read_QIcon
-
 
 class RequestList(MyTreeView):
 

@@ -49,7 +49,6 @@ from actilectrum.paymentrequest import PaymentRequest
 from actilectrum.i18n import _
 from actilectrum.logging import Logger
 
-
 class Processor(threading.Thread, Logger):
     polling_interval = 5*60
 

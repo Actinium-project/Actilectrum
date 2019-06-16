@@ -91,7 +91,7 @@ info "installing pip."
 "$python" -m ensurepip
 
 
-info "preparing electrum-locale."
+info "preparing actilectrum-locale."
 (
     cd "$PROJECT_ROOT"
     git submodule update --init

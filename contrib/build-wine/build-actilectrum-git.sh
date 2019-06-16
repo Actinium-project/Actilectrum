@@ -20,7 +20,7 @@ cd tmp
 
 pushd $WINEPREFIX/drive_c/actilectrum
 
-# Load electrum-locale for this release
+# Load actilectrum-locale for this release
 git submodule init
 git submodule update
 

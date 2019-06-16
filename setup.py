@@ -85,6 +85,9 @@ setup(
         'actilectrum.gui': [
             'icons/*',
         ],
+        'actilectrum.gui': [
+            'icons/*',
+        ],
     },
     scripts=['actilectrum/actilectrum'],
     data_files=data_files,

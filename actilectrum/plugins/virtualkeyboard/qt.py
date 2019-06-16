@@ -5,11 +5,6 @@ from PyQt5.QtWidgets import (QVBoxLayout, QGridLayout, QPushButton)
 from actilectrum.plugin import BasePlugin, hook
 from actilectrum.i18n import _
 
-from PyQt5.QtWidgets import (QVBoxLayout, QGridLayout, QPushButton)
-
-from actilectrum.plugin import BasePlugin, hook
-from actilectrum.i18n import _
-
 
 class Plugin(BasePlugin):
     vkb = None

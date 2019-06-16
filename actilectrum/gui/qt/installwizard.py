@@ -290,6 +290,8 @@ class InstallWizard(QDialog, MessageBoxMixin, BaseWizard):
 
         return self.temp_storage.path, (self.temp_storage if self.temp_storage.file_exists() else None)  #
 
+        return self.temp_storage.path, (self.temp_storage if self.temp_storage.file_exists() else None)  #
+
     def run_upgrades(self, storage):
         path = storage.path
         if storage.requires_split():

@@ -56,6 +56,10 @@ if TYPE_CHECKING:
 _logger = get_logger(__name__)
 
 
+
+_logger = get_logger(__name__)
+
+
 try:
     from actilectrum.plot import plot_history, NothingToPlotException
 except:
