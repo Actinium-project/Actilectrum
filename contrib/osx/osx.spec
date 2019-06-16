@@ -65,6 +65,12 @@ hiddenimports += collect_submodules('btchip')
 hiddenimports += collect_submodules('keepkeylib')
 hiddenimports += collect_submodules('websocket')
 hiddenimports += collect_submodules('ckcc')
+hiddenimports += ['_scrypt', 'PyQt5.QtPrintSupport']  # needed by Revealer
+
+# safetlib imports PyQt5.Qt.  We use a local updated copy of pinmatrix.py until they
+# release a new version that includes https://github.com/archos-safe-t/python-safet/commit/b1eab3dba4c04fdfc1fcf17b66662c28c5f2380e
+hiddenimports.remove('safetlib.qt.pinmatrix')
+
 
 # safetlib imports PyQt5.Qt.  We use a local updated copy of pinmatrix.py until they
 # release a new version that includes https://github.com/archos-safe-t/python-safet/commit/b1eab3dba4c04fdfc1fcf17b66662c28c5f2380e
@@ -72,11 +78,11 @@ hiddenimports.remove('safetlib.qt.pinmatrix')
 
 
 datas = [
-    (actilectrum + PYPKG + '/*.json', PYPKG),
-    (actilectrum + PYPKG + '/wordlist/english.txt', PYPKG + '/wordlist'),
-    (actilectrum + PYPKG + '/locale', PYPKG + '/locale'),
-    (actilectrum + PYPKG + '/plugins', PYPKG + '/plugins'),
-    (actilectrum + PYPKG + '/gui/icons', PYPKG + '/gui/icons'),
+    (electrum + PYPKG + '/*.json', PYPKG),
+    (electrum + PYPKG + '/wordlist/english.txt', PYPKG + '/wordlist'),
+    (electrum + PYPKG + '/locale', PYPKG + '/locale'),
+    (electrum + PYPKG + '/plugins', PYPKG + '/plugins'),
+    (electrum + PYPKG + '/gui/icons', PYPKG + '/gui/icons'),
 ]
 datas += collect_data_files('trezorlib')
 datas += collect_data_files('safetlib')
@@ -95,24 +101,24 @@ binaries += [(actilectrum + "contrib/osx/libsecp256k1.0.dylib", ".")]
 binaries += [b for b in collect_dynamic_libs('PyQt5') if 'macstyle' in b[0]]
 
 # We don't put these files in to actually include them in the script but to make the Analysis method scan them for imports
-a = Analysis([actilectrum+ MAIN_SCRIPT,
-              actilectrum+'actilectrum/gui/qt/main_window.py',
-              actilectrum+'actilectrum/gui/text.py',
-              actilectrum+'actilectrum/util.py',
-              actilectrum+'actilectrum/wallet.py',
-              actilectrum+'actilectrum/simple_config.py',
-              actilectrum+'actilectrum/bitcoin.py',
-              actilectrum+'actilectrum/blockchain.py',
-              actilectrum+'actilectrum/dnssec.py',
-              actilectrum+'actilectrum/commands.py',
-              actilectrum+'actilectrum/plugins/cosigner_pool/qt.py',
-              actilectrum+'actilectrum/plugins/email_requests/qt.py',
-              actilectrum+'actilectrum/plugins/trezor/qt.py',
-              actilectrum+'actilectrum/plugins/safe_t/client.py',
-              actilectrum+'actilectrum/plugins/safe_t/qt.py',
-              actilectrum+'actilectrum/plugins/keepkey/qt.py',
-              actilectrum+'actilectrum/plugins/ledger/qt.py',
-              actilectrum+'actilectrum/plugins/coldcard/qt.py',
+a = Analysis([electrum+ MAIN_SCRIPT,
+              electrum+'actilectrum/gui/qt/main_window.py',
+              electrum+'actilectrum/gui/text.py',
+              electrum+'actilectrum/util.py',
+              electrum+'actilectrum/wallet.py',
+              electrum+'actilectrum/simple_config.py',
+              electrum+'actilectrum/bitcoin.py',
+              electrum+'actilectrum/blockchain.py',
+              electrum+'actilectrum/dnssec.py',
+              electrum+'actilectrum/commands.py',
+              electrum+'actilectrum/plugins/cosigner_pool/qt.py',
+              electrum+'actilectrum/plugins/email_requests/qt.py',
+              electrum+'actilectrum/plugins/trezor/qt.py',
+              electrum+'actilectrum/plugins/safe_t/client.py',
+              electrum+'actilectrum/plugins/safe_t/qt.py',
+              electrum+'actilectrum/plugins/keepkey/qt.py',
+              electrum+'actilectrum/plugins/ledger/qt.py',
+              electrum+'actilectrum/plugins/coldcard/qt.py',
               ],
              binaries=binaries,
              datas=datas,

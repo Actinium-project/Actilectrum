@@ -28,7 +28,7 @@ from actilectrum.plugin import hook
 from actilectrum.i18n import _
 from actilectrum.util import make_dir, InvalidPassword, UserCancelled
 from actilectrum.gui.qt.util import (read_QIcon, EnterButton, WWLabel, icon_path,
-                                  WindowModalDialog, Buttons, CloseButton, OkButton)
+                                      WindowModalDialog, Buttons, CloseButton, OkButton)
 from actilectrum.gui.qt.qrtextedit import ScanQRTextEdit
 from actilectrum.gui.qt.main_window import StatusBarButton
 
@@ -137,7 +137,7 @@ class Plugin(RevealerPlugin):
             try:
                 self.make_digital(self.d)
             except Exception:
-                traceback.print_exc(file=sys.stdout)
+                self.logger.exception('')
             else:
                 self.cypherseed_dialog(window)
 
@@ -557,7 +557,7 @@ class Plugin(RevealerPlugin):
                 painter.drawLine(base_img.width()-(dist_h), 0,  base_img.width()-(dist_h), base_img.height())
 
                 painter.drawImage(((total_distance_h))+11, ((total_distance_h))+11,
-                                  QImage(icon_path('actilectrumb.png')).scaledToWidth(2.1*(total_distance_h), Qt.SmoothTransformation))
+                                  QImage(icon_path('actilectrum.png')).scaledToWidth(2.1*(total_distance_h), Qt.SmoothTransformation))
 
                 painter.setPen(QPen(Qt.white, border_thick*8))
                 painter.drawLine(base_img.width()-((total_distance_h))-(border_thick*8)/2-(border_thick/2)-2,

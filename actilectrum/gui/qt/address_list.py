@@ -30,11 +30,7 @@ from PyQt5.QtCore import Qt, QPersistentModelIndex, QModelIndex
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QFont
 from PyQt5.QtWidgets import QAbstractItemView, QComboBox, QLabel, QMenu
 
-from actilectrum.i18n import _
-from actilectrum.util import block_explorer_URL
-from actilectrum.plugin import run_hook
-from actilectrum.bitcoin import is_address
-from actilectrum.wallet import InternalAddressCorruption
+from .util import MyTreeView, MONOSPACE_FONT, ColorScheme
 
 from .util import MyTreeView, MONOSPACE_FONT, ColorScheme
 
@@ -157,7 +153,7 @@ class AddressList(MyTreeView):
                 address_item[self.Columns.TYPE].setBackground(ColorScheme.GREEN.as_color(True))
             address_item[self.Columns.LABEL].setData(address, Qt.UserRole)
             # setup column 1
-            if self.wallet.is_frozen(address):
+            if self.wallet.is_frozen_address(address):
                 address_item[self.Columns.ADDRESS].setBackground(ColorScheme.BLUE.as_color(True))
             if self.wallet.is_beyond_limit(address):
                 address_item[self.Columns.ADDRESS].setBackground(ColorScheme.RED.as_color(True))
@@ -173,6 +169,7 @@ class AddressList(MyTreeView):
             self.showColumn(self.Columns.FIAT_BALANCE)
         else:
             self.hideColumn(self.Columns.FIAT_BALANCE)
+        self.filter()
 
     def create_menu(self, position):
         from actilectrum.wallet import Multisig_Wallet
@@ -186,6 +183,8 @@ class AddressList(MyTreeView):
         menu = QMenu()
         if not multi_select:
             idx = self.indexAt(position)
+            if not idx.isValid():
+                return
             col = idx.column()
             item = self.model().itemFromIndex(idx)
             if not item:
@@ -197,6 +196,8 @@ class AddressList(MyTreeView):
 
             column_title = self.model().horizontalHeaderItem(col).text()
             copy_text = self.model().itemFromIndex(idx).text()
+            if col == self.Columns.COIN_BALANCE or col == self.Columns.FIAT_BALANCE:
+                copy_text = copy_text.strip()
             menu.addAction(_("Copy {}").format(column_title), lambda: self.place_text_on_clipboard(copy_text))
             menu.addAction(_('Details'), lambda: self.parent.show_address(addr))
             persistent = QPersistentModelIndex(addr_idx)
@@ -213,12 +214,12 @@ class AddressList(MyTreeView):
             if addr_URL:
                 menu.addAction(_("View on block explorer"), lambda: webbrowser.open(addr_URL))
 
-            if not self.wallet.is_frozen(addr):
-                menu.addAction(_("Freeze"), lambda: self.parent.set_frozen_state([addr], True))
+            if not self.wallet.is_frozen_address(addr):
+                menu.addAction(_("Freeze"), lambda: self.parent.set_frozen_state_of_addresses([addr], True))
             else:
-                menu.addAction(_("Unfreeze"), lambda: self.parent.set_frozen_state([addr], False))
+                menu.addAction(_("Unfreeze"), lambda: self.parent.set_frozen_state_of_addresses([addr], False))
 
-        coins = self.wallet.get_utxos(addrs)
+        coins = self.wallet.get_spendable_coins(addrs, config=self.config)
         if coins:
             menu.addAction(_("Spend from"), lambda: self.parent.spend_coins(coins))
 

@@ -14,10 +14,11 @@ from actilectrum import version
 from actilectrum import constants
 from actilectrum import ecc
 from actilectrum.i18n import _
-from actilectrum.util import PrintError, make_aiohttp_session
+from actilectrum.util import make_aiohttp_session
+from actilectrum.logging import Logger
 
 
-class UpdateCheck(QWidget, PrintError):
+class UpdateCheck(QWidget, Logger):
     url = "https://actilectrum.org/version"
     download_url = "https://actilectrum.org/#download"
 
@@ -86,18 +87,19 @@ class UpdateCheck(QWidget, PrintError):
                 self.detail_label.setText(_("You can download the new version from {}.").format(url))
             else:
                 self.heading_label.setText('<h2>' + _("Already up to date") + '</h2>')
-                self.detail_label.setText(_("You are already on the latest version of Electrum."))
+                self.detail_label.setText(_("You are already on the latest version of Actilectrum."))
         else:
             self.heading_label.setText('<h2>' + _("Checking for updates...") + '</h2>')
-            self.detail_label.setText(_("Please wait while Electrum checks for available updates."))
+            self.detail_label.setText(_("Please wait while Actilectrum checks for available updates."))
 
 
-class UpdateCheckThread(QThread, PrintError):
+class UpdateCheckThread(QThread, Logger):
     checked = pyqtSignal(object)
     failed = pyqtSignal()
 
     def __init__(self, main_window):
-        super().__init__()
+        QThread.__init__(self)
+        Logger.__init__(self)
         self.main_window = main_window
 
     async def get_update_info(self):
@@ -120,7 +122,7 @@ class UpdateCheckThread(QThread, PrintError):
                     msg = version_num.encode('utf-8')
                     if ecc.verify_message_with_address(address=address, sig65=sig, message=msg,
                                                        net=constants.BitcoinMainnet):
-                        self.print_error(f"valid sig for version announcement '{version_num}' from address '{address}'")
+                        self.logger.info(f"valid sig for version announcement '{version_num}' from address '{address}'")
                         break
                 else:
                     raise Exception('no valid signature for version announcement')
@@ -134,8 +136,7 @@ class UpdateCheckThread(QThread, PrintError):
         try:
             update_info = asyncio.run_coroutine_threadsafe(self.get_update_info(), network.asyncio_loop).result()
         except Exception as e:
-            #self.print_error(traceback.format_exc())
-            self.print_error(f"got exception: '{repr(e)}'")
+            self.logger.info(f"got exception: '{repr(e)}'")
             self.failed.emit()
         else:
             self.checked.emit(update_info)

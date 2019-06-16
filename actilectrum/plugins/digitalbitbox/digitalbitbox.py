@@ -17,7 +17,7 @@ import time
 
 from actilectrum.crypto import sha256d, EncodeAES_base64, EncodeAES_bytes, DecodeAES_bytes, hmac_oneshot
 from actilectrum.bitcoin import (TYPE_ADDRESS, push_script, var_int, public_key_to_p2pkh,
-                              is_address)
+                                  is_address)
 from actilectrum.bip32 import BIP32Node
 from actilectrum import ecc
 from actilectrum.ecc import msg_magic
@@ -27,9 +27,14 @@ from actilectrum.transaction import Transaction
 from actilectrum.i18n import _
 from actilectrum.keystore import Hardware_KeyStore
 from ..hw_wallet import HW_PluginBase
-from actilectrum.util import print_error, to_string, UserCancelled, UserFacingException
+from actilectrum.util import to_string, UserCancelled, UserFacingException
 from actilectrum.base_wizard import ScriptTypeNotSupported, HWD_SETUP_NEW_WALLET
 from actilectrum.network import Network
+from actilectrum.logging import get_logger
+
+
+_logger = get_logger(__name__)
+
 
 try:
     import hid
@@ -406,7 +411,7 @@ class DigitalBitbox_Client():
             r = to_string(r, 'utf8')
             reply = json.loads(r)
         except Exception as e:
-            print_error('Exception caught ' + repr(e))
+            _logger.info(f'Exception caught {repr(e)}')
         return reply
 
 
@@ -431,7 +436,7 @@ class DigitalBitbox_Client():
             if 'error' in reply:
                 self.password = None
         except Exception as e:
-            print_error('Exception caught ' + repr(e))
+            _logger.info(f'Exception caught {repr(e)}')
         return reply
 
 
@@ -679,7 +684,7 @@ class DigitalBitbox_KeyStore(Hardware_KeyStore):
         except BaseException as e:
             self.give_error(e, True)
         else:
-            print_error("Transaction is_complete", tx.is_complete())
+            _logger.info("Transaction is_complete {tx.is_complete()}")
             tx.raw = tx.serialize()
 
 
@@ -746,7 +751,7 @@ class DigitalBitboxPlugin(HW_PluginBase):
         )
         try:
             text = Network.send_http_on_proxy('post', url, body=args.encode('ascii'), headers={'content-type': 'application/x-www-form-urlencoded'})
-            print_error('digitalbitbox reply from server', text)
+            _logger.info(f'digitalbitbox reply from server {text}')
         except Exception as e:
             self.handler.show_error(repr(e)) # repr because str(Exception()) == ''
 

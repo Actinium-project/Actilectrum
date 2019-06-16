@@ -13,10 +13,13 @@ from PyQt5.QtCore import QThread, pyqtSignal
 
 from btchip.btchip import BTChipException
 
-from actilectrum.i18n import _
-from actilectrum.util import print_msg
-from actilectrum import constants, bitcoin
 from actilectrum.gui.qt.qrcodewidget import QRCodeWidget
+from actilectrum.i18n import _
+from actilectrum import constants, bitcoin
+from actilectrum.logging import get_logger
+
+
+_logger = get_logger(__name__)
 
 
 DEBUG = False
@@ -354,4 +357,5 @@ class LedgerWebSocket(QThread):
 
 def debug_msg(*args):
     if DEBUG:
-        print_msg(*args)        
+        str_ = " ".join([str(item) for item in args])
+        _logger.debug(str_)

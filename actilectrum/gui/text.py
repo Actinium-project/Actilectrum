@@ -5,15 +5,17 @@ import datetime
 import locale
 from decimal import Decimal
 import getpass
+import logging
 
-import actilectrum as actilectrum
-from actilectrum.util import format_satoshis, set_verbosity
+import actilectrum as electrum
+from actilectrum.util import format_satoshis
 from actilectrum.bitcoin import is_address, COIN, TYPE_ADDRESS
 from actilectrum.transaction import TxOutput
 from actilectrum.wallet import Wallet
 from actilectrum.storage import WalletStorage
 from actilectrum.network import NetworkParameters, TxBroadcastError, BestEffortRequestFailed
 from actilectrum.interface import deserialize_server
+from actilectrum.logging import console_stderr_handler
 
 _ = lambda x:x  # i18n
 
@@ -52,7 +54,7 @@ class ElectrumGui:
         self.set_cursor(0)
         self.w = curses.newwin(10, 50, 5, 5)
 
-        set_verbosity(False)
+        console_stderr_handler.setLevel(logging.CRITICAL)
         self.tab = 0
         self.pos = 0
         self.popup_pos = 0
