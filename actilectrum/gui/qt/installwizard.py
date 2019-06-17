@@ -1,4 +1,4 @@
-# Copyright (C) 2018 The Actilectrum developers
+# Copyright (C) 2018 The Electrum developers
 # Distributed under the MIT software license, see the accompanying
 # file LICENCE or http://www.opensource.org/licenses/mit-license.php
 
@@ -35,9 +35,9 @@ MSG_HW_STORAGE_ENCRYPTION = _("Set wallet file encryption.") + '\n'\
                           + _("Note: If you enable this setting, you will need your hardware device to open your wallet.")
 WIF_HELP_TEXT = (_('WIF keys are typed in Actilectrum, based on script type.') + '\n\n' +
                  _('A few examples') + ':\n' +
-                 'p2pkh:T4PsyoR5gC8B...       \t-> NXqi2tzER...\n' +
-                 'p2wpkh-p2sh:T4PsyoR5gC8B... \t-> PUuWxSpVC...\n' +
-                 'p2wpkh:T4PsyoR5gC8B...      \t-> acm1q3fjf...')
+                 'p2pkh:T4PsyoR5gC8B...       \t-> LXqi2tzER...\n' +
+                 'p2wpkh-p2sh:T4PsyoR5gC8B... \t-> MUuWxSpVC...\n' +
+                 'p2wpkh:T4PsyoR5gC8B...      \t-> ltc1q3fjf...')
 # note: full key is T4PsyoR5gC8BGEoTe8So7YQWPnvdkqTJqRVpLoMmZVqBsunDdeuJ
 MSG_PASSPHRASE_WARN_ISSUE4566 = _("Warning") + ": "\
                               + _("You have multiple consecutive whitespaces or leading/trailing "
@@ -118,7 +118,7 @@ class InstallWizard(QDialog, MessageBoxMixin, BaseWizard):
     def __init__(self, config, app, plugins):
         QDialog.__init__(self, None)
         BaseWizard.__init__(self, config, plugins)
-        self.setWindowTitle('Actilectrum  -  ' + _('Install Wizard'))
+        self.setWindowTitle('Electrum  -  ' + _('Install Wizard'))
         self.app = app
         self.config = config
         self.setMinimumSize(600, 400)
@@ -286,9 +286,6 @@ class InstallWizard(QDialog, MessageBoxMixin, BaseWizard):
                         raise UserCancelled()
                 else:
                     raise Exception('Unexpected encryption version')
-        return True
-
-        return self.temp_storage.path, (self.temp_storage if self.temp_storage.file_exists() else None)  #
 
         return self.temp_storage.path, (self.temp_storage if self.temp_storage.file_exists() else None)  #
 
