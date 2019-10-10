@@ -6,10 +6,13 @@ from numbers import Number
 
 from actilectrum.network import filter_protocol, Network
 from actilectrum.util import create_and_start_event_loop, log_exceptions
+from actilectrum.simple_config import SimpleConfig
 
+
+config = SimpleConfig()
 
 loop, stopping_fut, loop_thread = create_and_start_event_loop()
-network = Network()
+network = Network(config)
 network.start()
 
 @log_exceptions

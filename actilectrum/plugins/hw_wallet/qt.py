@@ -32,10 +32,11 @@ from PyQt5.QtWidgets import QVBoxLayout, QLineEdit, QHBoxLayout, QLabel
 
 from actilectrum.gui.qt.password_dialog import PasswordLayout, PW_PASSPHRASE
 from actilectrum.gui.qt.util import (read_QIcon, WWLabel, OkButton, WindowModalDialog,
-                                      Buttons, CancelButton, TaskThread)
+                                      Buttons, CancelButton, TaskThread, char_width_in_lineedit)
 
 from actilectrum.i18n import _
 from actilectrum.logging import Logger
+from actilectrum.util import parse_URI, InvalidBitcoinURI
 
 from .plugin import OutdatedHwFirmwareException
 
@@ -149,7 +150,7 @@ class QtHandlerBase(QObject, Logger):
         hbox = QHBoxLayout(dialog)
         hbox.addWidget(QLabel(msg))
         text = QLineEdit()
-        text.setMaximumWidth(100)
+        text.setMaximumWidth(12 * char_width_in_lineedit())
         text.returnPressed.connect(dialog.accept)
         hbox.addWidget(text)
         hbox.addStretch(1)
@@ -255,6 +256,14 @@ class QtPluginBase(object):
         receive_address_e = main_window.receive_address_e
 
         def show_address():
-            addr = receive_address_e.text()
+            addr = str(receive_address_e.text())
+            # note: 'addr' could be ln invoice or BIP21 URI
+            try:
+                uri = parse_URI(addr)
+            except InvalidBitcoinURI:
+                pass
+            else:
+                addr = uri.get('address')
             keystore.thread.add(partial(plugin.show_address, wallet, addr, keystore))
-        receive_address_e.addButton("eye1.png", show_address, _("Show on {}").format(plugin.device))
+        dev_name = f"{plugin.device} ({keystore.label})"
+        receive_address_e.addButton("eye1.png", show_address, _("Show on {}").format(dev_name))

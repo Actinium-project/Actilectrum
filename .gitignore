@@ -17,10 +17,12 @@ env/
 bin/
 /app.fil
 .idea
+.mypy_cache
+.vscode
 
 # icons
-actilectrum/gui/qt/icons_rc.py
 actilectrum/gui/kivy/theming/light-0.png
+actilectrum/gui/kivy/theming/light-1.png
 actilectrum/gui/kivy/theming/light.atlas
 
 # tests/tox
@@ -34,4 +36,4 @@ contrib/build-wine/tmp/
 contrib/build-wine/fresh_clone/
 contrib/build-linux/appimage/build/
 contrib/build-linux/appimage/.cache/
-.vscode
+contrib/android_debug.keystore

@@ -15,6 +15,7 @@ from actilectrum.gui.kivy.i18n import _
 
 from actilectrum.util import InvalidPassword
 from actilectrum.address_synchronizer import TX_HEIGHT_LOCAL
+from actilectrum.wallet import CannotBumpFee
 
 
 Builder.load_string('''
@@ -27,6 +28,7 @@ Builder.load_string('''
     can_broadcast: False
     can_rbf: False
     fee_str: ''
+    feerate_str: ''
     date_str: ''
     date_label:''
     amount_str: ''
@@ -65,6 +67,9 @@ Builder.load_string('''
                     BoxLabel:
                         text: _('Transaction fee') if root.fee_str else ''
                         value: root.fee_str
+                    BoxLabel:
+                        text: _('Transaction fee rate') if root.feerate_str else ''
+                        value: root.feerate_str
                 TopLabel:
                     text: _('Transaction ID') + ':' if root.tx_hash else ''
                 TxHashLabel:
@@ -93,6 +98,11 @@ Builder.load_string('''
                 height: '48dp'
                 icon: 'atlas://actilectrum/gui/kivy/theming/light/qrcode'
                 on_release: root.show_qr()
+            Button:
+                size_hint: 0.5, None
+                height: '48dp'
+                text: _('Label')
+                on_release: root.label_dialog()
             Button:
                 size_hint: 0.5, None
                 height: '48dp'
@@ -148,7 +158,13 @@ class TxDialog(Factory.Popup):
         else:
             self.is_mine = True
             self.amount_str = format_amount(-amount)
-        self.fee_str = format_amount(fee) if fee is not None else _('unknown')
+        if fee is not None:
+            self.fee_str = format_amount(fee)
+            fee_per_kb = fee / self.tx.estimated_size() * 1000
+            self.feerate_str = self.app.format_fee_rate(fee_per_kb)
+        else:
+            self.fee_str = _('unknown')
+            self.feerate_str = _('unknown')
         self.can_sign = self.wallet.can_sign(self.tx)
         self.ids.output_list.update(self.tx.get_outputs_for_UI())
         self.is_local_tx = tx_mined_status.height == TX_HEIGHT_LOCAL
@@ -202,16 +218,13 @@ class TxDialog(Factory.Popup):
         d = BumpFeeDialog(self.app, fee, size, self._do_rbf)
         d.open()
 
-    def _do_rbf(self, old_fee, new_fee, is_final):
-        if new_fee is None:
-            return
-        delta = new_fee - old_fee
-        if delta < 0:
-            self.app.show_error("fee too low")
+    def _do_rbf(self, new_fee_rate, is_final):
+        if new_fee_rate is None:
             return
         try:
-            new_tx = self.wallet.bump_fee(self.tx, delta)
-        except BaseException as e:
+            new_tx = self.wallet.bump_fee(tx=self.tx,
+                                          new_fee_rate=new_fee_rate)
+        except CannotBumpFee as e:
             self.app.show_error(str(e))
             return
         if is_final:
@@ -261,4 +274,15 @@ class TxDialog(Factory.Popup):
                 self.app._trigger_update_wallet()  # FIXME private...
                 self.dismiss()
         d = Question(question, on_prompt)
+        d.open()
+
+    def label_dialog(self):
+        from .label_dialog import LabelDialog
+        key = self.tx.txid()
+        text = self.app.wallet.get_label(key)
+        def callback(text):
+            self.app.wallet.set_label(key, text)
+            self.update()
+            self.app.history_screen.update()
+        d = LabelDialog(_('Enter Transaction Label'), text, callback)
         d.open()

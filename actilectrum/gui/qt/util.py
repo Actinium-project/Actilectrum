@@ -5,12 +5,14 @@ import sys
 import platform
 import queue
 import traceback
+import os
+import webbrowser
 
 from functools import partial, lru_cache
 from typing import NamedTuple, Callable, Optional, TYPE_CHECKING, Union, List, Dict
 
 from PyQt5.QtGui import (QFont, QColor, QCursor, QPixmap, QStandardItem,
-                         QPalette, QIcon)
+                         QPalette, QIcon, QFontMetrics)
 from PyQt5.QtCore import (Qt, QPersistentModelIndex, QModelIndex, pyqtSignal,
                           QCoreApplication, QItemSelectionModel, QThread,
                           QSortFilterProxyModel, QSize, QLocale)
@@ -21,9 +23,8 @@ from PyQt5.QtWidgets import (QPushButton, QLabel, QMessageBox, QHBoxLayout,
                              QHeaderView, QApplication, QToolTip, QTreeWidget, QStyledItemDelegate)
 
 from actilectrum.i18n import _, languages
-from actilectrum.util import (FileImportFailed, FileExportFailed,
-                               resource_path)
-from actilectrum.paymentrequest import PR_UNPAID, PR_PAID, PR_EXPIRED
+from actilectrum.util import FileImportFailed, FileExportFailed, make_aiohttp_session, resource_path
+from actilectrum.util import PR_UNPAID, PR_PAID, PR_EXPIRED, PR_INFLIGHT, PR_UNKNOWN
 
 if TYPE_CHECKING:
     from .main_window import ElectrumWindow
@@ -40,23 +41,14 @@ else:
 dialogs = []
 
 pr_icons = {
+    PR_UNKNOWN:"unpaid.png",
     PR_UNPAID:"unpaid.png",
     PR_PAID:"confirmed.png",
-    PR_EXPIRED:"expired.png"
+    PR_EXPIRED:"expired.png",
+    PR_INFLIGHT:"unconfirmed.png",
 }
 
-pr_tooltips = {
-    PR_UNPAID:_('Pending'),
-    PR_PAID:_('Paid'),
-    PR_EXPIRED:_('Expired')
-}
 
-expiration_values = [
-    (_('1 hour'), 60*60),
-    (_('1 day'), 24*60*60),
-    (_('1 week'), 7*24*60*60),
-    (_('Never'), None)
-]
 
 
 class EnterButton(QPushButton):
@@ -92,6 +84,7 @@ class WWLabel(QLabel):
     def __init__ (self, text="", parent=None):
         QLabel.__init__(self, text, parent)
         self.setWordWrap(True)
+        self.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
 
 class HelpLabel(QLabel):
@@ -126,7 +119,7 @@ class HelpButton(QPushButton):
         QPushButton.__init__(self, '?')
         self.help_text = text
         self.setFocusPolicy(Qt.NoFocus)
-        self.setFixedWidth(20)
+        self.setFixedWidth(round(2.2 * char_width_in_lineedit()))
         self.clicked.connect(self.onclick)
 
     def onclick(self):
@@ -142,7 +135,7 @@ class InfoButton(QPushButton):
         QPushButton.__init__(self, 'Info')
         self.help_text = text
         self.setFocusPolicy(Qt.NoFocus)
-        self.setFixedWidth(60)
+        self.setFixedWidth(6 * char_width_in_lineedit())
         self.clicked.connect(self.onclick)
 
     def onclick(self):
@@ -289,8 +282,9 @@ class WaitingDialog(WindowModalDialog):
         if isinstance(parent, MessageBoxMixin):
             parent = parent.top_level_window()
         WindowModalDialog.__init__(self, parent, _("Please wait"))
+        self.message_label = QLabel(message)
         vbox = QVBoxLayout(self)
-        vbox.addWidget(QLabel(message))
+        vbox.addWidget(self.message_label)
         self.accepted.connect(self.on_accepted)
         self.show()
         self.thread = TaskThread(self)
@@ -302,6 +296,10 @@ class WaitingDialog(WindowModalDialog):
 
     def on_accepted(self):
         self.thread.stop()
+
+    def update(self, msg):
+        print(msg)
+        self.message_label.setText(msg)
 
 
 def line_dialog(parent, title, label, ok_label, default=None):
@@ -460,7 +458,8 @@ class ElectrumItemDelegate(QStyledItemDelegate):
 
 class MyTreeView(QTreeView):
 
-    def __init__(self, parent: 'ElectrumWindow', create_menu, stretch_column=None, editable_columns=None):
+    def __init__(self, parent: 'ElectrumWindow', create_menu, *,
+                 stretch_column=None, editable_columns=None):
         super().__init__(parent)
         self.parent = parent
         self.config = self.parent.config
@@ -470,10 +469,12 @@ class MyTreeView(QTreeView):
         self.setUniformRowHeights(True)
 
         # Control which columns are editable
-        if editable_columns is None:
+        if editable_columns is not None:
+            editable_columns = set(editable_columns)
+        elif stretch_column is not None:
             editable_columns = {stretch_column}
         else:
-            editable_columns = set(editable_columns)
+            editable_columns = {}
         self.editable_columns = editable_columns
         self.setItemDelegate(ElectrumItemDelegate(self))
         self.current_filter = ""
@@ -869,6 +870,25 @@ class FromList(QTreeWidget):
         sm = QHeaderView.ResizeToContents
         self.header().setSectionResizeMode(0, sm)
         self.header().setSectionResizeMode(1, sm)
+
+
+def char_width_in_lineedit() -> int:
+    char_width = QFontMetrics(QLineEdit().font()).averageCharWidth()
+    # 'averageCharWidth' seems to underestimate on Windows, hence 'max()'
+    return max(9, char_width)
+
+
+def webopen(url: str):
+    if sys.platform == 'linux' and os.environ.get('APPIMAGE'):
+        # When on Linux webbrowser.open can fail in AppImage because it can't find the correct libdbus.
+        # We just fork the process and unset LD_LIBRARY_PATH before opening the URL.
+        # See #5425
+        if os.fork() == 0:
+            del os.environ['LD_LIBRARY_PATH']
+            webbrowser.open(url)
+            sys.exit(0)
+    else:
+        webbrowser.open(url)
 
 
 if __name__ == "__main__":

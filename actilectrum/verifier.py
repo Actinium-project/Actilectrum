@@ -121,8 +121,8 @@ class SPV(NetworkJobOnDefaultServer):
             if self.network.config.get("skipmerklecheck"):
                 self.logger.info(f"skipping merkle proof check {tx_hash}")
             else:
-                self.logger.info(str(e))
-                raise GracefulDisconnect(e)
+                self.logger.info(repr(e))
+                raise GracefulDisconnect(e) from e
         # we passed all the tests
         self.merkle_roots[tx_hash] = header.get('merkle_root')
         self.requested_merkle.discard(tx_hash)
@@ -133,8 +133,6 @@ class SPV(NetworkJobOnDefaultServer):
                               txpos=pos,
                               header_hash=header_hash)
         self.wallet.add_verified_tx(tx_hash, tx_info)
-        #if self.is_up_to_date() and self.wallet.is_up_to_date():
-        #    self.wallet.save_verified_tx(write=True)
 
     @classmethod
     def hash_merkle_root(cls, merkle_branch: Sequence[str], tx_hash: str, leaf_pos_in_tree: int):
@@ -142,13 +140,20 @@ class SPV(NetworkJobOnDefaultServer):
         try:
             h = hash_decode(tx_hash)
             merkle_branch_bytes = [hash_decode(item) for item in merkle_branch]
-            int(leaf_pos_in_tree)  # raise if invalid
+            leaf_pos_in_tree = int(leaf_pos_in_tree)  # raise if invalid
         except Exception as e:
             raise MerkleVerificationFailure(e)
-
-        for i, item in enumerate(merkle_branch_bytes):
-            h = sha256d(item + h) if ((leaf_pos_in_tree >> i) & 1) else sha256d(h + item)
+        if leaf_pos_in_tree < 0:
+            raise MerkleVerificationFailure('leaf_pos_in_tree must be non-negative')
+        index = leaf_pos_in_tree
+        for item in merkle_branch_bytes:
+            if len(item) != 32:
+                raise MerkleVerificationFailure('all merkle branch items have to 32 bytes long')
+            h = sha256d(item + h) if (index & 1) else sha256d(h + item)
+            index >>= 1
             cls._raise_if_valid_tx(bh2u(h))
+        if index != 0:
+            raise MerkleVerificationFailure(f'leaf_pos_in_tree too large for branch')
         return hash_encode(h)
 
     @classmethod
@@ -192,6 +197,8 @@ def verify_tx_is_in_block(tx_hash: str, merkle_branch: Sequence[str],
     if not block_header:
         raise MissingBlockHeader("merkle verification failed for {} (missing header {})"
                                  .format(tx_hash, block_height))
+    if len(merkle_branch) > 30:
+        raise MerkleVerificationFailure(f"merkle branch too long: {len(merkle_branch)}")
     calc_merkle_root = SPV.hash_merkle_root(merkle_branch, tx_hash, leaf_pos_in_tree)
     if block_header.get('merkle_root') != calc_merkle_root:
         raise MerkleRootMismatch("merkle verification failed for {} ({} != {})".format(

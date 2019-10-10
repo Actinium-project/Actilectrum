@@ -74,7 +74,7 @@ electrum_logger.setLevel(logging.DEBUG)
 
 
 def _delete_old_logs(path, keep=10):
-    files = sorted(list(pathlib.Path(path).glob("electrum_ltc_log_*.log")), reverse=True)
+    files = sorted(list(pathlib.Path(path).glob("actilectrum_log_*.log")), reverse=True)
     for f in files[keep:]:
         os.remove(str(f))
 
@@ -89,7 +89,7 @@ def _configure_file_logging(log_directory: pathlib.Path):
 
     timestamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
     PID = os.getpid()
-    _logfile_path = log_directory / f"electrum_ltc_log_{timestamp}_{PID}.log"
+    _logfile_path = log_directory / f"actilectrum_log_{timestamp}_{PID}.log"
 
     file_handler = logging.FileHandler(_logfile_path)
     file_handler.setFormatter(file_formatter)
@@ -243,7 +243,8 @@ def configure_logging(config):
     logging.getLogger('kivy').propagate = False
 
     from . import ELECTRUM_VERSION
-    _logger.info(f"Actilectrum version: {ELECTRUM_VERSION} - https://actilectrum.org - https://github.com/Actinium-project/Actilectrum")
+    from .constants import GIT_REPO_URL
+    _logger.info(f"Actilectrum version: {ELECTRUM_VERSION} - https://actilectrum.org - {GIT_REPO_URL}")
     _logger.info(f"Python version: {sys.version}. On platform: {describe_os_version()}")
     _logger.info(f"Logging to file: {str(_logfile_path)}")
     _logger.info(f"Log filters: verbosity {repr(verbosity)}, verbosity_shortcuts {repr(verbosity_shortcuts)}")
@@ -256,7 +257,7 @@ def get_logfile_path() -> Optional[pathlib.Path]:
 def describe_os_version() -> str:
     if 'ANDROID_DATA' in os.environ:
         from kivy import utils
-        if utils.platform is not "android":
+        if utils.platform != "android":
             return utils.platform
         import jnius
         bv = jnius.autoclass('android.os.Build$VERSION')

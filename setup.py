@@ -52,7 +52,6 @@ if platform.system() in ['Linux', 'FreeBSD', 'DragonFly']:
 
 extras_require = {
     'hardware': requirements_hw,
-    'fast': ['pycryptodomex'],
     'gui': ['pyqt5'],
 }
 extras_require['full'] = [pkg for sublist in list(extras_require.values()) for pkg in sublist]
@@ -77,7 +76,7 @@ setup(
         '': ['*.txt', '*.json', '*.ttf', '*.otf'],
         'actilectrum': [
             'wordlist/*.txt',
-            'locale/*/LC_MESSAGES/actilectrum.mo',
+            'locale/*/LC_MESSAGES/electrum.mo',
         ],
         'actilectrum.gui': [
             'icons/*',

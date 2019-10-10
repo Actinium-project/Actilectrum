@@ -52,8 +52,9 @@ Development version
 
 Check out the code from GitHub::
 
-    git clone git://github.com/Actinium-project/actilectrum.git
-    cd actilectrum
+    git clone git://github.com/Actinium-project/Actilectrum.git
+    cd Actilectrum
+    git submodule update --init
 
 Run install (this should install dependencies)::
 
@@ -68,7 +69,7 @@ Compile the protobuf description file::
 Create translations (optional)::
 
     sudo apt-get install python-requests gettext
-    ./contrib/make_locale
+    ./contrib/pull_locale
 
 
 
