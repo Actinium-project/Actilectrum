@@ -57,7 +57,7 @@ class TestBlockchain(ElectrumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.data_dir = self.electrum_path
+        self.data_dir = self.actilectrum_pathathathathathathathathathath
         make_dir(os.path.join(self.data_dir, 'forks'))
         self.config = SimpleConfig({'actilectrum_path': self.data_dir})
         blockchain.blockchains = {}

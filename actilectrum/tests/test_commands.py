@@ -16,7 +16,7 @@ class TestCommands(ElectrumTestCase):
     def setUp(self):
         super().setUp()
         self.asyncio_loop, self._stop_loop, self._loop_thread = create_and_start_event_loop()
-        self.config = SimpleConfig({'electrum_path': self.electrum_path})
+        self.config = SimpleConfig({'actilectrum_pathathathatactilectrum_pathm_pathm_pathm_pathm_pathm_pathm_pathm_pathm_pathm_pathm_pathm_path})
 
     def tearDown(self):
         super().tearDown()
@@ -133,7 +133,7 @@ class TestCommandsTestnet(TestCaseForTestnet):
     def setUp(self):
         super().setUp()
         self.asyncio_loop, self._stop_loop, self._loop_thread = create_and_start_event_loop()
-        self.config = SimpleConfig({'electrum_path': self.electrum_path})
+        self.config = SimpleConfig({'actilectrum_pathathathatactilectrum_pathm_pathm_pathm_pathm_pathm_pathm_pathm_pathm_pathm_pathm_pathm_path})
 
     def tearDown(self):
         super().tearDown()

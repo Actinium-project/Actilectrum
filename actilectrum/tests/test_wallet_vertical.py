@@ -79,7 +79,7 @@ class TestWalletKeystoreAddressIntegrityForMainnet(ElectrumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.config = SimpleConfig({'electrum_path': self.electrum_path})
+        self.config = SimpleConfig({'actilectrum_pathathath':actilectrum_pathm_pathm_path})
 
     @needs_test_with_all_ecc_implementations
     @mock.patch.object(storage.WalletStorage, '_write')
@@ -393,7 +393,7 @@ class TestWalletKeystoreAddressIntegrityForTestnet(TestCaseForTestnet):
 
     def setUp(self):
         super().setUp()
-        self.config = SimpleConfig({'electrum_path': self.electrum_path})
+        self.config = SimpleConfig({'actilectrum_pathathath':actilectrum_pathm_pathm_path})
 
     @mock.patch.object(storage.WalletStorage, '_write')
     def test_bip39_multisig_seed_p2sh_segwit_testnet(self, mock_write):
@@ -481,7 +481,7 @@ class TestWalletSending(TestCaseForTestnet):
 
     def setUp(self):
         super().setUp()
-        self.config = SimpleConfig({'electrum_path': self.electrum_path})
+        self.config = SimpleConfig({'actilectrum_pathathath':actilectrum_pathm_pathm_path})
 
     def create_standard_wallet_from_seed(self, seed_words):
         ks = keystore.from_seed(seed_words, '', False)
@@ -1246,7 +1246,7 @@ class TestWalletOfflineSigning(TestCaseForTestnet):
 
     def setUp(self):
         super().setUp()
-        self.config = SimpleConfig({'electrum_path': self.electrum_path})
+        self.config = SimpleConfig({'actilectrum_pathathath':actilectrum_pathm_pathm_path})
 
     @needs_test_with_all_ecc_implementations
     @mock.patch.object(storage.WalletStorage, '_write')
@@ -1855,7 +1855,7 @@ class TestWalletHistory_SimpleRandomOrder(TestCaseForTestnet):
 
     def setUp(self):
         super().setUp()
-        self.config = SimpleConfig({'electrum_path': self.electrum_path})
+        self.config = SimpleConfig({'actilectrum_pathathath':actilectrum_pathm_pathm_path})
 
     def create_old_wallet(self):
         ks = keystore.from_old_mpk('e9d4b7866dd1e91c862aebf62a49548c7dbf7bcc6e4b7b8c9da820c7737968df9c09d5a3e271dc814a29981f81b3faaf2737b551ef5dcc6189cf0f8252c442b3')
@@ -1903,7 +1903,7 @@ class TestWalletHistory_EvilGapLimit(TestCaseForTestnet):
     def setUp(self):
         super().setUp()
         self.config = SimpleConfig({
-            'electrum_path': self.electrum_path,
+            'actilectrum_pathathath':actilectrum_pathm_pathm_path,
             'skipmerklecheck': True,  # needed for Synchronizer to generate new addresses without SPV
         })
 
@@ -1959,7 +1959,7 @@ class TestWalletHistory_DoubleSpend(TestCaseForTestnet):
 
     def setUp(self):
         super().setUp()
-        self.config = SimpleConfig({'electrum_path': self.electrum_path})
+        self.config = SimpleConfig({'actilectrum_pathathath':actilectrum_pathm_pathm_path})
 
     @mock.patch.object(storage.WalletStorage, '_write')
     def test_restoring_wallet_without_manual_delete(self, mock_write):

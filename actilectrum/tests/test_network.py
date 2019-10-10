@@ -52,7 +52,7 @@ class TestNetwork(ElectrumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.config = SimpleConfig({'electrum_path': self.electrum_path})
+        self.config = SimpleConfig({'actilectrum_pathathathatactilectrum_pathm_pathm_pathm_pathm_path})
         self.interface = MockInterface(self.config)
 
     def test_fork_noconflict(self):

@@ -278,8 +278,8 @@ class TestStorageUpgrade(WalletTestCase):
         from actilectrum.plugin import Plugins
         from actilectrum.simple_config import SimpleConfig
 
-        cls.__electrum_path = tempfile.mkdtemp()
-        config = SimpleConfig({'electrum_path': cls.__electrum_path})
+        cls.__actilectrum_pathathathath = tempfile.mkdtemp()
+        config = SimpleConfig({'actilectrum_pathathathathactilectrum_pathm_pathm_pathm_path})
 
         gui_name = 'cmdline'
         # TODO it's probably wasteful to load all plugins... only need Trezor
@@ -288,7 +288,7 @@ class TestStorageUpgrade(WalletTestCase):
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
-        shutil.rmtree(cls.__electrum_path)
+        shutil.rmtree(cls.__actilectrum_pathathathath)
 
     def _upgrade_storage(self, wallet_json, accounts=1):
         if accounts == 1:

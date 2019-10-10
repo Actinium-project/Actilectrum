@@ -98,7 +98,7 @@ class SimpleConfig(Logger):
             self.upgrade()
 
     def actilectrum_path(self):
-        # Read electrum_path from command line
+        # Read actilectrum_path from command line
         # Otherwise use the user's default data directory.
         path = self.get('actilectrum_path')
         if path is None:

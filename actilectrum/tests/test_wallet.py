@@ -34,7 +34,7 @@ class WalletTestCase(ElectrumTestCase):
     def setUp(self):
         super(WalletTestCase, self).setUp()
         self.user_dir = tempfile.mkdtemp()
-        self.config = SimpleConfig({'electrum_path': self.user_dir})
+        self.config = SimpleConfig({'actilectrum_path': self.user_dir})
 
         self.wallet_path = os.path.join(self.user_dir, "somewallet")
 
