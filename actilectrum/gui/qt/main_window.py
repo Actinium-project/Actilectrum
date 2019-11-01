@@ -73,7 +73,7 @@ from actilectrum.network import Network, TxBroadcastError, BestEffortRequestFail
 from actilectrum.exchange_rate import FxThread
 from actilectrum.simple_config import SimpleConfig
 from actilectrum.logging import Logger
-from actilectrum.paymentrequest import PR_PAID
+from actilectrum.util import PR_PAID, PR_UNPAID, PR_INFLIGHT, PR_FAILED
 from actilectrum.util import pr_expiration_values
 
 from .exception_window import Exception_Hook
@@ -196,7 +196,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
                 tabs.addTab(tab, icon, description.replace("&", ""))
 
         add_optional_tab(tabs, self.addresses_tab, read_QIcon("tab_addresses.png"), _("&Addresses"), "addresses")
-        if self.config.get('lightning'):
+        if self.wallet.has_lightning():
             add_optional_tab(tabs, self.channels_tab, read_QIcon("lightning.png"), _("Channels"), "channels")
         add_optional_tab(tabs, self.utxo_tab, read_QIcon("tab_coins.png"), _("Co&ins"), "utxo")
         add_optional_tab(tabs, self.contacts_tab, read_QIcon("tab_contacts.png"), _("Con&tacts"), "contacts")
@@ -232,8 +232,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             interests = ['wallet_updated', 'network_updated', 'blockchain_updated',
                          'new_transaction', 'status',
                          'banner', 'verified', 'fee', 'fee_histogram', 'on_quotes',
-                         'on_history', 'channel', 'channels', 'payment_received',
-                         'payment_status']
+                         'on_history', 'channel', 'channels_updated',
+                         'invoice_status', 'request_status']
             # To avoid leaking references to "self" that prevent the
             # window from being GC-ed when closed, callbacks should be
             # methods of this class only, and specifically not be
@@ -377,13 +377,15 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             self.on_fx_quotes()
         elif event == 'on_history':
             self.on_fx_history()
-        elif event == 'channels':
-            self.channels_list.update_rows.emit()
+        elif event == 'channels_updated':
+            self.channels_list.update_rows.emit(*args)
         elif event == 'channel':
             self.channels_list.update_single_row.emit(*args)
             self.update_status()
-        elif event == 'payment_status':
-            self.on_payment_status(*args)
+        elif event == 'request_status':
+            self.on_request_status(*args)
+        elif event == 'invoice_status':
+            self.on_invoice_status(*args)
         elif event == 'status':
             self.update_status()
         elif event == 'banner':
@@ -401,10 +403,6 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
                 self.fee_slider.update()
                 self.require_fee_update = True
             self.history_model.on_fee_histogram()
-        elif event == 'payment_received':
-            wallet, key, status = args
-            if wallet == self.wallet:
-                self.notify(_('Payment received') + '\n' + key)
         else:
             self.logger.info(f"unexpected network event: {event} {args}")
 
@@ -585,7 +583,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         file_menu.addAction(_("&Quit"), self.close)
 
         wallet_menu = menubar.addMenu(_("&Wallet"))
-        wallet_menu.addAction(_("&Information"), self.show_master_public_keys)
+        wallet_menu.addAction(_("&Information"), self.show_wallet_info)
         wallet_menu.addSeparator()
         self.password_menu = wallet_menu.addAction(_("&Password"), self.change_password_dialog)
         self.seed_menu = wallet_menu.addAction(_("&Seed"), self.show_seed_dialog)
@@ -625,7 +623,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         view_menu = menubar.addMenu(_("&View"))
         add_toggle_action(view_menu, self.addresses_tab)
         add_toggle_action(view_menu, self.utxo_tab)
-        if self.config.get('lightning'):
+        if self.wallet.has_lightning():
             add_toggle_action(view_menu, self.channels_tab)
         add_toggle_action(view_menu, self.contacts_tab)
         add_toggle_action(view_menu, self.console_tab)
@@ -635,8 +633,9 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         # Settings / Preferences are all reserved keywords in macOS using this as work around
         tools_menu.addAction(_("Actilectrum preferences") if sys.platform == 'darwin' else _("Preferences"), self.settings_dialog)
         tools_menu.addAction(_("&Network"), lambda: self.gui_object.show_network_dialog(self))
-        if self.config.get('lightning'):
+        if self.wallet.has_lightning():
             tools_menu.addAction(_("&Lightning"), self.gui_object.show_lightning_dialog)
+            tools_menu.addAction(_("&Watchtower"), self.gui_object.show_watchtower_dialog)
         tools_menu.addAction(_("&Plugins"), self.plugins_dialog)
         tools_menu.addSeparator()
         tools_menu.addAction(_("&Sign/verify message"), self.sign_verify_message)
@@ -656,9 +655,9 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         help_menu = menubar.addMenu(_("&Help"))
         help_menu.addAction(_("&About"), self.show_about)
         help_menu.addAction(_("&Check for updates"), self.show_update_check)
-        help_menu.addAction(_("&Official website"), lambda: webopen("https://electrum-ltc.org"))
+        help_menu.addAction(_("&Official website"), lambda: webopen("https://actilectrum.org"))
         help_menu.addSeparator()
-        help_menu.addAction(_("&Documentation"), lambda: webopen("http://docs.electrum.org/")).setShortcut(QKeySequence.HelpContents)
+        help_menu.addAction(_("&Documentation"), lambda: webopen("http://docs.actilectrum.org/")).setShortcut(QKeySequence.HelpContents)
         help_menu.addAction(_("&Report Bug"), self.show_report_bug)
         help_menu.addSeparator()
         help_menu.addAction(_("&Donate to server"), self.donate_to_server)
@@ -690,7 +689,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         msg = ' '.join([
             _("Please report any bugs as issues on github:<br/>"),
             f'''<a href="{constants.GIT_REPO_ISSUES_URL}">{constants.GIT_REPO_ISSUES_URL}</a><br/><br/>''',
-            _("Before reporting a bug, upgrade to the most recent version of Electrum (latest release or git HEAD), and include the version number in your report."),
+            _("Before reporting a bug, upgrade to the most recent version of Actilectrum (latest release or git HEAD), and include the version number in your report."),
             _("Try to explain not only what the bug is, but how it occurs.")
          ])
         self.show_message(msg, title="Actilectrum - " + _("Reporting Bugs"), rich_text=True)
@@ -921,9 +920,9 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         d = address_dialog.AddressDialog(self, addr)
         d.exec_()
 
-    def show_transaction(self, tx, tx_desc = None):
+    def show_transaction(self, tx, *, invoice=None, tx_desc=None):
         '''tx_desc is set only for txs created in the Send tab'''
-        show_transaction(tx, self, tx_desc)
+        show_transaction(tx, self, invoice=invoice, desc=tx_desc)
 
     def create_receive_tab(self):
         # A 4-column grid layout.  All the stretch is in the last column.
@@ -986,7 +985,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         buttons.addStretch(1)
         buttons.addWidget(self.clear_invoice_button)
         buttons.addWidget(self.create_invoice_button)
-        if self.config.get('lightning'):
+        if self.wallet.has_lightning():
             self.create_lightning_invoice_button = QPushButton(_('Lightning'))
             self.create_lightning_invoice_button.setIcon(read_QIcon("lightning.png"))
             self.create_lightning_invoice_button.clicked.connect(lambda: self.create_invoice(True))
@@ -1015,14 +1014,14 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         vbox_g.addLayout(grid)
         vbox_g.addStretch()
 
-        hbox_r = QHBoxLayout()
-        hbox_r.addWidget(self.receive_qr)
-        hbox_r.addWidget(self.receive_address_e)
+        self.receive_widgets = QTabWidget()
+        self.receive_widgets.addTab(self.receive_qr, 'QR Code')
+        self.receive_widgets.addTab(self.receive_address_e, 'Text')
 
         hbox = QHBoxLayout()
         hbox.addLayout(vbox_g)
         hbox.addStretch()
-        hbox.addLayout(hbox_r)
+        hbox.addWidget(self.receive_widgets)
 
         w = QWidget()
         w.searchable_list = self.request_list
@@ -1109,8 +1108,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
 
     def do_copy(self, title, content):
         self.app.clipboard().setText(content)
-        self.show_message(_("{} copied to clipboard").format(title))
-        #QToolTip.showText(QCursor.pos(), _("{} copied to clipboard").format(title), self.parent)
+        self.show_message(_(f"{title} copied to clipboard:\n\n{content}"))
 
     def export_payment_request(self, addr):
         r = self.wallet.receive_requests.get(addr)
@@ -1210,6 +1208,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         description_label = HelpLabel(_('Description'), msg)
         grid.addWidget(description_label, 2, 0)
         self.message_e = MyLineEdit()
+        self.message_e.setMinimumWidth(700)
         grid.addWidget(self.message_e, 2, 1, 1, -1)
 
         msg = _('Amount to be sent.') + '\n\n' \
@@ -1228,12 +1227,9 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             lambda: self.fiat_send_e.setFrozen(self.amount_e.isReadOnly()))
 
         self.max_button = EnterButton(_("Max"), self.spend_max)
-        self.max_button.setFixedWidth(self.amount_e.width())
+        self.max_button.setFixedWidth(100)
         self.max_button.setCheckable(True)
         grid.addWidget(self.max_button, 3, 3)
-        hbox = QHBoxLayout()
-        hbox.addStretch(1)
-        grid.addLayout(hbox, 3, 4)
 
         self.from_label = QLabel(_('From'))
         grid.addWidget(self.from_label, 4, 0)
@@ -1348,13 +1344,14 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         self.preview_button.setToolTip(_('Display the details of your transaction before signing it.'))
         self.send_button = EnterButton(_("Send"), self.do_pay)
         self.clear_button = EnterButton(_("Clear"), self.do_clear)
+
         buttons = QHBoxLayout()
         buttons.addStretch(1)
-        buttons.addWidget(self.save_button)
         buttons.addWidget(self.clear_button)
+        buttons.addWidget(self.save_button)
         buttons.addWidget(self.preview_button)
         buttons.addWidget(self.send_button)
-        grid.addLayout(buttons, 6, 1, 1, 3)
+        grid.addLayout(buttons, 6, 1, 1, 4)
 
         self.amount_e.shortcut.connect(self.spend_max)
         self.payto_e.textChanged.connect(self.update_fee)
@@ -1416,6 +1413,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         vbox0.addLayout(grid)
         hbox = QHBoxLayout()
         hbox.addLayout(vbox0)
+        hbox.addStretch(1)
         w = QWidget()
         vbox = QVBoxLayout(w)
         vbox.addLayout(hbox)
@@ -1682,24 +1680,31 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         amount_sat = self.amount_e.get_amount()
         attempts = LN_NUM_PAYMENT_ATTEMPTS
         def task():
-            self.wallet.lnworker.pay(invoice, amount_sat, attempts)
+            try:
+                self.wallet.lnworker.pay(invoice, amount_sat, attempts)
+            except Exception as e:
+                self.show_error(str(e))
         self.do_clear()
         self.wallet.thread.add(task)
         self.invoice_list.update()
 
-    def on_payment_status(self, key, status, *args):
-        # todo: check that key is in this wallet's invoice list
-        self.invoice_list.update()
-        if status == 'success':
+    def on_request_status(self, key, status):
+        if key not in self.wallet.receive_requests:
+            return
+        if status == PR_PAID:
+            self.notify(_('Payment received') + '\n' + key)
+
+    def on_invoice_status(self, key, status):
+        if key not in self.wallet.invoices:
+            return
+        self.invoice_list.update_item(key, status)
+        if status == PR_PAID:
             self.show_message(_('Payment succeeded'))
             self.need_update.set()
-        elif status == 'progress':
-            print('on_payment_status', key, status, args)
-        elif status == 'failure':
+        elif status == PR_FAILED:
             self.show_error(_('Payment failed'))
-        elif status == 'error':
-            e = args[0]
-            self.show_error(_('Error') + '\n' + str(e))
+        else:
+            pass
 
     def read_invoice(self):
         if self.check_send_tab_payto_line_and_show_errors():
@@ -1734,10 +1739,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         invoice = self.read_invoice()
         if not invoice:
             return
-        if not preview:
-            self.wallet.save_invoice(invoice)
-            self.do_clear()
-            self.invoice_list.update()
+        self.wallet.save_invoice(invoice)
+        self.invoice_list.update()
         self.do_pay_invoice(invoice, preview)
 
     def do_pay_invoice(self, invoice, preview=False):
@@ -1787,7 +1790,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             return
 
         if preview:
-            self.show_transaction(tx, message)
+            self.show_transaction(tx, invoice=invoice)
             return
 
         if not self.network:
@@ -1823,11 +1826,11 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
 
         def sign_done(success):
             if success:
+                self.do_clear()
                 if not tx.is_complete():
-                    self.show_transaction(tx)
-                    self.do_clear()
+                    self.show_transaction(tx, invoice=invoice)
                 else:
-                    self.broadcast_transaction(tx, message)
+                    self.broadcast_transaction(tx, invoice=invoice)
         self.sign_tx_with_password(tx, sign_done, password)
 
     @protected
@@ -1852,33 +1855,35 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         msg = _('Signing transaction...')
         WaitingDialog(self, msg, task, on_success, on_failure)
 
-    def broadcast_transaction(self, tx, tx_desc):
+    def broadcast_transaction(self, tx, *, invoice=None, tx_desc=None):
 
         def broadcast_thread():
             # non-GUI thread
             pr = self.payment_request
             if pr and pr.has_expired():
                 self.payment_request = None
-                return False, _("Payment request has expired")
-            status = False
+                return False, _("Invoice has expired")
             try:
                 self.network.run_from_another_thread(self.network.broadcast_transaction(tx))
             except TxBroadcastError as e:
-                msg = e.get_message_for_gui()
+                return False, e.get_message_for_gui()
             except BestEffortRequestFailed as e:
-                msg = repr(e)
-            else:
-                status, msg = True, tx.txid()
-            if pr and status is True:
-                key = pr.get_id()
-                #self.wallet.set_invoice_paid(key, tx.txid())
+                return False, repr(e)
+            # success
+            txid = tx.txid()
+            if tx_desc:
+                self.wallet.set_label(txid, tx_desc)
+            if invoice:
+                self.wallet.set_paid(invoice['id'], txid)
+                self.wallet.set_label(txid, invoice['message'])
+            if pr:
                 self.payment_request = None
                 refund_address = self.wallet.get_receiving_address()
                 coro = pr.send_payment_and_receive_paymentack(str(tx), refund_address)
                 fut = asyncio.run_coroutine_threadsafe(coro, self.network.asyncio_loop)
                 ack_status, ack_msg = fut.result(timeout=20)
                 self.logger.info(f"Payment ACK: {ack_status}. Ack message: {ack_msg}")
-            return status, msg
+            return True, txid
 
         # Capture current TL window; override might be removed on return
         parent = self.top_level_window(lambda win: isinstance(win, MessageBoxMixin))
@@ -1886,10 +1891,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         def broadcast_done(result):
             # GUI thread
             if result:
-                status, msg = result
-                if status:
-                    if tx_desc is not None and tx.is_complete():
-                        self.wallet.set_label(tx.txid(), tx_desc)
+                success, msg = result
+                if success:
                     parent.show_message(_('Payment sent.') + '\n' + msg)
                     self.invoice_list.update()
                     self.do_clear()
@@ -2011,8 +2014,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         self.show_send_tab_onchain_fees(b)
 
     def show_send_tab_onchain_fees(self, b: bool):
-        self.feecontrol_fields.setVisible(b)
-        self.fee_e_label.setVisible(b)
+        self.feecontrol_fields.setEnabled(b)
+        #self.fee_e_label.setVisible(b)
 
     def pay_to_URI(self, URI):
         if not URI:
@@ -2294,6 +2297,9 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         sb.addPermanentWidget(StatusBarButton(read_QIcon("preferences.png"), _("Preferences"), self.settings_dialog ) )
         self.seed_button = StatusBarButton(read_QIcon("seed.png"), _("Seed"), self.show_seed_dialog )
         sb.addPermanentWidget(self.seed_button)
+        if self.wallet.has_lightning():
+            self.lightning_button = StatusBarButton(read_QIcon("lightning.png"), _("Lightning Network"), self.gui_object.show_lightning_dialog)
+            sb.addPermanentWidget(self.lightning_button)
         self.status_button = StatusBarButton(read_QIcon("status_disconnected.png"), _("Network"), lambda: self.gui_object.show_network_dialog(self))
         sb.addPermanentWidget(self.status_button)
         run_hook('create_status_bar', sb)
@@ -2381,7 +2387,26 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         if d.exec_():
             self.set_contact(line2.text(), line1.text())
 
-    def show_master_public_keys(self):
+    def disable_lightning(self):
+        warning = _('This will delete your lightning private keys')
+        r = self.question(_('Disable Lightning payments?') + '\n\n' + warning)
+        if not r:
+            return
+        self.wallet.remove_lightning()
+        self.show_warning(_('Lightning keys have been removed. This wallet will be closed'))
+        self.close()
+
+    def enable_lightning(self):
+        warning1 = _("Lightning support in Actilectrum is experimental. Do not put large amounts in lightning channels.")
+        warning2 = _("Funds stored in lightning channels are not recoverable from your seed. You must backup your wallet file everytime you create a new channel.")
+        r = self.question(_('Enable Lightning payments?') + '\n\n' + _('WARNINGS') + ': ' + '\n\n' + warning1 + '\n\n' + warning2)
+        if not r:
+            return
+        self.wallet.init_lightning()
+        self.show_warning(_('Lightning keys have been initialized. This wallet will be closed'))
+        self.close()
+
+    def show_wallet_info(self):
         dialog = WindowModalDialog(self, _("Wallet Information"))
         dialog.setMinimumSize(500, 100)
         mpk_list = self.wallet.get_master_public_keys()
@@ -2405,6 +2430,21 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             grid.addWidget(QLabel(_("Keystore type") + ':'), 4, 0)
             ks_type = str(keystore_types[0]) if keystore_types else _('No keystore')
             grid.addWidget(QLabel(ks_type), 4, 1)
+        # lightning
+        if self.wallet.has_lightning():
+            lightning_b = QPushButton(_('Disable'))
+            lightning_b.clicked.connect(dialog.close)
+            lightning_b.clicked.connect(self.disable_lightning)
+            lightning_label = QLabel(_('Enabled'))
+            lightning_b.setDisabled(bool(self.wallet.lnworker.channels))
+        else:
+            lightning_b = QPushButton(_('Enable'))
+            lightning_b.clicked.connect(dialog.close)
+            lightning_b.clicked.connect(self.enable_lightning)
+            lightning_label = QLabel(_('Disabled'))
+        grid.addWidget(QLabel(_('Lightning')), 5, 0)
+        grid.addWidget(lightning_label, 5, 1)
+        grid.addWidget(lightning_b, 5, 2)
         vbox.addLayout(grid)
 
         if self.wallet.is_deterministic():
@@ -2684,7 +2724,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             tx = tx_from_str(txt)
             return Transaction(tx)
         except BaseException as e:
-            self.show_critical(_("Electrum was unable to parse your transaction") + ":\n" + repr(e))
+            self.show_critical(_("Actilectrum was unable to parse your transaction") + ":\n" + repr(e))
             return
 
     def read_tx_from_qrcode(self):
@@ -3000,7 +3040,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             self.fx.trigger_update()
         run_hook('close_settings_dialog')
         if d.need_restart:
-            self.show_warning(_('Please restart Electrum to activate the new GUI settings'), title=_('Success'))
+            self.show_warning(_('Please restart Actilectrum to activate the new GUI settings'), title=_('Success'))
 
     def closeEvent(self, event):
         # It seems in some rare cases this closeEvent() is called twice
@@ -3215,7 +3255,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             return
         if is_final:
             new_tx.set_rbf(False)
-        self.show_transaction(new_tx, tx_label)
+        self.show_transaction(new_tx, tx_desc=tx_label)
 
     def save_transaction_into_wallet(self, tx):
         win = self.top_level_window()

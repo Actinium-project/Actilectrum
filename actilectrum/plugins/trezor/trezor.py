@@ -139,7 +139,7 @@ class TrezorPlugin(HW_PluginBase):
 
     def enumerate(self):
         # If there is a bridge, prefer that.
-        # On Windows, the bridge runs as Admin (and Electrum usually does not),
+        # On Windows, the bridge runs as Admin (and Actilectrum usually does not),
         # so the bridge has better chances of finding devices. see #5420
         # This also avoids duplicate entries.
         try:

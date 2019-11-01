@@ -41,6 +41,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union, NamedTuple, Sequence
 
 from .i18n import _
+from .bip32 import BIP32Node
 from .crypto import sha256
 from .util import (NotEnoughFunds, UserCancelled, profiler,
                    format_satoshis, format_fee_satoshis, NoDynamicFeeEstimates,
@@ -229,22 +230,45 @@ class Abstract_Wallet(AddressSynchronizer):
         self.fiat_value            = storage.get('fiat_value', {})
         self.receive_requests      = storage.get('payment_requests', {})
         self.invoices              = storage.get('invoices', {})
-
         # convert invoices
         for invoice_key, invoice in self.invoices.items():
             if invoice.get('type') == PR_TYPE_ONCHAIN:
                 outputs = [TxOutput(*output) for output in invoice.get('outputs')]
                 invoice['outputs'] = outputs
-
         self.calc_unused_change_addresses()
-
         # save wallet type the first time
         if self.storage.get('wallet_type') is None:
             self.storage.put('wallet_type', self.wallet_type)
-
         self.contacts = Contacts(self.storage)
         self._coin_price_cache = {}
-        self.lnworker = LNWallet(self) if self.config.get('lightning') else None
+        # lightning
+        ln_xprv = self.storage.get('lightning_privkey2')
+        self.lnworker = LNWallet(self, ln_xprv) if ln_xprv else None
+
+    def has_lightning(self):
+        return bool(self.lnworker)
+
+    def init_lightning(self):
+        if self.storage.get('lightning_privkey2'):
+            return
+        if not is_using_fast_ecc():
+            raise Exception('libsecp256k1 library not available. '
+                            'Verifying Lightning channels is too computationally expensive without libsecp256k1, aborting.')
+        # TODO derive this deterministically from wallet.keystore at keystore generation time
+        # probably along a hardened path ( lnd-equivalent would be m/1017'/coinType'/ )
+        seed = os.urandom(32)
+        node = BIP32Node.from_rootseed(seed, xtype='standard')
+        ln_xprv = node.to_xprv()
+        self.storage.put('lightning_privkey2', ln_xprv)
+        self.storage.write()
+
+    def remove_lightning(self):
+        if not self.storage.get('lightning_privkey2'):
+            return
+        if bool(self.lnworker.channels):
+            raise Exception('Error: This wallet has channels')
+        self.storage.put('lightning_privkey2', None)
+        self.storage.write()
 
     def stop_threads(self):
         super().stop_threads()
@@ -261,6 +285,7 @@ class Abstract_Wallet(AddressSynchronizer):
     def start_network(self, network):
         AddressSynchronizer.start_network(self, network)
         if self.lnworker:
+            network.maybe_init_lightning()
             self.lnworker.start_network(network)
 
     def load_and_cleanup(self):
@@ -558,13 +583,17 @@ class Abstract_Wallet(AddressSynchronizer):
 
     def get_invoices(self):
         out = [self.get_invoice(key) for key in self.invoices.keys()]
-        out = [x for x in out if x and x.get('status') != PR_PAID]
+        out = list(filter(None, out))
         out.sort(key=operator.itemgetter('time'))
         return out
 
-    def check_if_expired(self, item):
-        if item['status'] == PR_UNPAID and 'exp' in item and item['time'] + item['exp'] < time.time():
-            item['status'] = PR_EXPIRED
+    def set_paid(self, key, txid):
+        if key not in self.invoices:
+            return
+        invoice = self.invoices[key]
+        assert invoice.get('type') == PR_TYPE_ONCHAIN
+        invoice['txid'] = txid
+        self.storage.put('invoices', self.invoices)
 
     def get_invoice(self, key):
         if key not in self.invoices:
@@ -574,10 +603,9 @@ class Abstract_Wallet(AddressSynchronizer):
         if request_type == PR_TYPE_ONCHAIN:
             item['status'] = PR_PAID if item.get('txid') is not None else PR_UNPAID
         elif self.lnworker and request_type == PR_TYPE_LN:
-            item['status'] = self.lnworker.get_invoice_status(bfh(item['rhash']))
+            item['status'] = self.lnworker.get_payment_status(bfh(item['rhash']))
         else:
             return
-        self.check_if_expired(item)
         return item
 
     @profiler
@@ -1093,6 +1121,8 @@ class Abstract_Wallet(AddressSynchronizer):
                 fixed_outputs = old_not_is_mine
             else:
                 fixed_outputs = old_outputs
+        if not fixed_outputs:
+            raise CannotBumpFee(_('Cannot bump fee') + ': could not figure out which outputs to keep')
 
         coins = self.get_spendable_coins(None)
         for item in coins:
@@ -1367,10 +1397,9 @@ class Abstract_Wallet(AddressSynchronizer):
             if conf is not None:
                 req['confirmations'] = conf
         elif self.lnworker and _type == PR_TYPE_LN:
-            req['status'] = self.lnworker.get_invoice_status(bfh(key))
+            req['status'] = self.lnworker.get_payment_status(bfh(key))
         else:
             return
-        self.check_if_expired(req)
         # add URL if we are running a payserver
         if self.config.get('run_payserver'):
             host = self.config.get('payserver_host', 'localhost')
@@ -1443,7 +1472,7 @@ class Abstract_Wallet(AddressSynchronizer):
         if key in self.receive_requests:
             self.remove_payment_request(key)
         elif self.lnworker:
-            self.lnworker.delete_invoice(key)
+            self.lnworker.delete_payment(key)
 
     def delete_invoice(self, key):
         """ lightning or on-chain """
@@ -1451,7 +1480,7 @@ class Abstract_Wallet(AddressSynchronizer):
             self.invoices.pop(key)
             self.storage.put('invoices', self.invoices)
         elif self.lnworker:
-            self.lnworker.delete_invoice(key)
+            self.lnworker.delete_payment(key)
 
     def remove_payment_request(self, addr):
         if addr not in self.receive_requests:

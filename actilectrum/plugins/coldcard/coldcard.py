@@ -42,7 +42,7 @@ try:
         # avoid use of pycoin for MiTM message signature test
         def mitm_verify(self, sig, expect_xpub):
             # verify a signature (65 bytes) over the session key, using the master bip32 node
-            # - customized to use specific EC library of Electrum.
+            # - customized to use specific EC library of Actilectrum.
             pubkey = BIP32Node.from_xkey(expect_xpub).eckey
             try:
                 pubkey.verify_message_hash(sig[1:65], self.session_key)
@@ -590,7 +590,7 @@ class ColdcardPlugin(HW_PluginBase):
         # Build the text file Coldcard needs to understand the multisig wallet
         # it is participating in. All involved Coldcards can share same file.
 
-        print('# Exported from Electrum', file=fp)
+        print('# Exported from Actilectrum', file=fp)
         print(f'Name: {name:.20s}', file=fp)
         print(f'Policy: {wallet.m} of {wallet.n}', file=fp)
         print(f'Format: {wallet.txin_type.upper()}' , file=fp)

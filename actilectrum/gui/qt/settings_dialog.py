@@ -171,19 +171,8 @@ class SettingsDialog(WindowModalDialog):
         fee_widgets.append((batch_rbf_cb, None))
 
         # lightning
-        help_lightning = _("""Enable Lightning Network payments. Note that funds stored in
-lightning channels are not recoverable from your seed. You must backup
-your wallet file after every channel creation.""")
         lightning_widgets = []
-        lightning_cb = QCheckBox(_("Enable Lightning"))
-        lightning_cb.setToolTip(help_lightning)
-        lightning_cb.setChecked(bool(self.config.get('lightning', False)))
-        def on_lightning_checked(x):
-            self.config.set_key('lightning', bool(x))
-        lightning_cb.stateChanged.connect(on_lightning_checked)
-        lightning_widgets.append((lightning_cb, None))
-
-        help_persist = _("""If this option is checked, Electrum will persist as a daemon after
+        help_persist = _("""If this option is checked, Actilectrum will persist as a daemon after
 you close all your wallet windows. Your local watchtower will keep
 running, and it will protect your channels even if your wallet is not
 open. For this to work, your computer needs to be online regularly.""")
@@ -264,7 +253,7 @@ open. For this to work, your computer needs to be online regularly.""")
         self.payserver_port_e.setEnabled(self.config.get('run_payserver', False))
         services_widgets.append((payserver_cb, self.payserver_port_e))
 
-        help_local_wt = _("""To setup a local watchtower, you must run Electrum on a machine
+        help_local_wt = _("""To setup a local watchtower, you must run Actilectrum on a machine
         that is always connected to the internet. Configure a port if you want it to be public.""")
         local_wt_cb = QCheckBox(_("Run Watchtower"))
         local_wt_cb.setToolTip(help_local_wt)
@@ -282,7 +271,7 @@ open. For this to work, your computer needs to be online regularly.""")
         # units
         units = base_units_list
         msg = (_('Base unit of your wallet.')
-               + '\n1 LTC = 1000 mLTC. 1 mLTC = 1000 uLTC. 1 uLTC = 100 sat.\n'
+               + '\n1 ACM = 1000 mACM. 1 mACM = 1000 uACM. 1 uACM = 100 sat.\n'
                + _('This setting affects the Send tab, and all balance related fields.'))
         unit_label = HelpLabel(_('Base unit') + ':', msg)
         unit_combo = QComboBox()

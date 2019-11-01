@@ -324,7 +324,7 @@ def build_psbt(tx: Transaction, wallet: Abstract_Wallet):
 
 
 def recover_tx_from_psbt(first: BasicPSBT, wallet: Abstract_Wallet) -> Transaction:
-    # Take a PSBT object and re-construct the Electrum transaction object.
+    # Take a PSBT object and re-construct the Actilectrum transaction object.
     # - does not include signatures, see merge_sigs_from_psbt
     # - any PSBT in the group could be used for this purpose; all must share tx details
     

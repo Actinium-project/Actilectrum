@@ -125,7 +125,7 @@ def init_cmdline(config_options, wallet_path, server):
 
     if cmd.requires_wallet and not storage.file_exists():
         print_msg("Error: Wallet file not found.")
-        print_msg("Type 'electrum-ltc create' to create a new wallet, or provide a path to a wallet with the -w option")
+        print_msg("Type 'Actilectrum create' to create a new wallet, or provide a path to a wallet with the -w option")
         sys_exit(1)
 
     # important warning
@@ -333,14 +333,6 @@ if __name__ == '__main__':
         constants.set_regtest()
     elif config.get('simnet'):
         constants.set_simnet()
-    elif config.get('lightning') and not config.get('reckless'):
-        raise Exception('lightning option not available on mainnet')
-
-    if config.get('lightning'):
-        from actilectrum.ecc_fast import is_using_fast_ecc
-        if not is_using_fast_ecc():
-            raise Exception('libsecp256k1 library not available. '
-                            'Verifying Lightning channels is too computationally expensive without libsecp256k1, aborting.')
 
     cmdname = config.get('cmd')
 
@@ -398,7 +390,7 @@ if __name__ == '__main__':
             try:
                 result = daemon.request(config, 'run_cmdline', (config_options,), timeout)
             except daemon.DaemonNotRunning:
-                print_msg("Daemon not running; try 'electrum-ltc daemon -d'")
+                print_msg("Daemon not running; try 'Actilectrum daemon -d'")
                 if not cmd.requires_network:
                     print_msg("To run this command without a daemon, use --offline")
                 sys_exit(1)
