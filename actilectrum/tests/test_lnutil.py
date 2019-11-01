@@ -19,7 +19,7 @@ funding_output_index = 0
 funding_amount_satoshi = 10000000
 commitment_number = 42
 local_delay = 144
-local_dust_limit_satoshi = 546
+local_dust_limit_satoshi = 100000
 
 local_payment_basepoint = bytes.fromhex('034f355bdcb7cc0af728ef3cceb9615d90684bb5b2ca5f859ab0f0b704075871aa')
 remote_payment_basepoint = bytes.fromhex('032c0b7cf95324a07d05398b240174dc0c2be444d96b159aa6c7f7b1e668680991')
