@@ -148,7 +148,7 @@ class ExchangeBase(Logger):
 class Bit2C(ExchangeBase):
 
     async def get_rates(self, ccy):
-        json = await self.get_json('www.bit2c.co.il', '/Exchanges/LTCNIS/Ticker.json')
+        json = await self.get_json('www.bit2c.co.il', '/Exchanges/ACMNIS/Ticker.json')
         return {'NIS': Decimal(json['ll'])}
 
 
@@ -176,7 +176,7 @@ class BitcoinVenezuela(ExchangeBase):
     async def request_history(self, ccy):
         json = await self.get_json('api.bitcoinvenezuela.com',
                              "/historical/index.php?coin=ACM")
-        return json[ccy +'_LTC']
+        return json[ccy +'_ACM']
 
 
 class Bitfinex(ExchangeBase):
@@ -280,12 +280,12 @@ class Kraken(ExchangeBase):
 
     async def get_rates(self, ccy):
         dicts = await self.get_json('api.kraken.com', '/0/public/AssetPairs')
-        pairs = [k for k in dicts['result'] if k.startswith('XLTCZ')]
+        pairs = [k for k in dicts['result'] if k.startswith('XACMZ')]
         json = await self.get_json('api.kraken.com',
                              '/0/public/Ticker?pair=%s' % ','.join(pairs))
         ccys = [p[5:] for p in pairs]
         result = dict.fromkeys(ccys)
-        result[ccy] = Decimal(json['result']['XLTCZ'+ccy]['c'][0])
+        result[ccy] = Decimal(json['result']['XACMZ'+ccy]['c'][0])
         return result
 
     def history_ccys(self):
@@ -294,7 +294,7 @@ class Kraken(ExchangeBase):
     async def request_history(self, ccy):
         query = '/0/public/OHLC?pair=ACM%s&interval=1440' % ccy
         json = await self.get_json('api.kraken.com', query)
-        history = json['result']['XLTCZ'+ccy]
+        history = json['result']['XACMZ'+ccy]
         return dict([(time.strftime('%Y-%m-%d', time.localtime(t[0])), t[4])
                                     for t in history])
 
@@ -317,7 +317,7 @@ class TheRockTrading(ExchangeBase):
 
     async def get_rates(self, ccy):
         json = await self.get_json('api.therocktrading.com',
-                                   '/v1/funds/LTCEUR/ticker')
+                                   '/v1/funds/ACMEUR/ticker')
         return {'EUR': Decimal(json['last'])}
 
 

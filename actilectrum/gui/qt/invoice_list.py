@@ -27,6 +27,7 @@ from enum import IntEnum
 
 from PyQt5.QtCore import Qt, QItemSelectionModel
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QFont
+from PyQt5.QtWidgets import QAbstractItemView
 from PyQt5.QtWidgets import QHeaderView, QMenu, QVBoxLayout, QGridLayout, QLabel, QTreeWidget, QTreeWidgetItem
 
 from actilectrum.i18n import _
@@ -70,6 +71,7 @@ class InvoiceList(MyTreeView):
                          editable_columns=[])
         self.setSortingEnabled(True)
         self.setModel(QStandardItemModel(self))
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.update()
 
     def update_item(self, key, status):
@@ -85,9 +87,10 @@ class InvoiceList(MyTreeView):
             return
         status_item = model.item(row, self.Columns.STATUS)
         status, status_str = get_request_status(req)
-        log = self.parent.wallet.lnworker.logs.get(key)
-        if log and status == PR_INFLIGHT:
-            status_str += '... (%d)'%len(log)
+        if self.parent.wallet.lnworker:
+            log = self.parent.wallet.lnworker.logs.get(key)
+            if log and status == PR_INFLIGHT:
+                status_str += '... (%d)'%len(log)
         status_item.setText(status_str)
         status_item.setIcon(read_QIcon(pr_icons.get(status)))
 
@@ -142,6 +145,16 @@ class InvoiceList(MyTreeView):
         export_meta_gui(self.parent, _('invoices'), self.parent.invoices.export_file)
 
     def create_menu(self, position):
+        items = self.selected_in_column(0)
+        if len(items)>1:
+            keys = [ item.data(ROLE_REQUEST_ID)  for item in items]
+            invoices = [ self.parent.wallet.get_invoice(key) for key in keys]
+            invoices = [ invoice for invoice in invoices if invoice['status'] == PR_UNPAID and invoice['type'] == PR_TYPE_ONCHAIN]
+            if len(invoices) > 1:
+                menu = QMenu(self)
+                menu.addAction(_("Pay multiple invoices"), lambda: self.parent.pay_multiple_invoices(invoices))
+                menu.exec_(self.viewport().mapToGlobal(position))
+            return
         idx = self.indexAt(position)
         item = self.model().itemFromIndex(idx)
         item_col0 = self.model().itemFromIndex(idx.sibling(idx.row(), self.Columns.DATE))
@@ -155,9 +168,10 @@ class InvoiceList(MyTreeView):
         menu.addAction(_("Details"), lambda: self.parent.show_invoice(key))
         if invoice['status'] == PR_UNPAID:
             menu.addAction(_("Pay"), lambda: self.parent.do_pay_invoice(invoice))
-        log = self.parent.wallet.lnworker.logs.get(key)
-        if log:
-            menu.addAction(_("View log"), lambda: self.show_log(key, log))
+        if self.parent.wallet.lnworker:
+            log = self.parent.wallet.lnworker.logs.get(key)
+            if log:
+                menu.addAction(_("View log"), lambda: self.show_log(key, log))
         menu.addAction(_("Delete"), lambda: self.parent.delete_invoice(key))
         menu.exec_(self.viewport().mapToGlobal(position))
 

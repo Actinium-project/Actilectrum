@@ -9,8 +9,8 @@ import logging
 
 import actilectrum as electrum
 from actilectrum.util import format_satoshis
-from actilectrum.bitcoin import is_address, COIN, TYPE_ADDRESS
-from actilectrum.transaction import TxOutput
+from actilectrum.bitcoin import is_address, COIN
+from actilectrum.transaction import PartialTxOutput
 from actilectrum.wallet import Wallet
 from actilectrum.storage import WalletStorage
 from actilectrum.network import NetworkParameters, TxBroadcastError, BestEffortRequestFailed
@@ -360,8 +360,9 @@ class ElectrumGui:
         else:
             password = None
         try:
-            tx = self.wallet.mktx([TxOutput(TYPE_ADDRESS, self.str_recipient, amount)],
-                                  password, self.config, fee)
+            tx = self.wallet.mktx(outputs=[PartialTxOutput.from_address_and_value(self.str_recipient, amount)],
+                                  password=password,
+                                  fee=fee)
         except Exception as e:
             self.show_message(repr(e))
             return
