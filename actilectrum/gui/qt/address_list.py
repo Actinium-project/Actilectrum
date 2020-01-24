@@ -78,8 +78,9 @@ class AddressList(MyTreeView):
 
     filter_columns = [Columns.TYPE, Columns.ADDRESS, Columns.LABEL, Columns.COIN_BALANCE]
 
-    def __init__(self, parent=None):
+    def __init__(self, parent):
         super().__init__(parent, self.create_menu, stretch_column=self.Columns.LABEL)
+        self.wallet = self.parent.wallet
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setSortingEnabled(True)
         self.show_change = AddressTypeFilter.ALL  # type: AddressTypeFilter
@@ -136,7 +137,8 @@ class AddressList(MyTreeView):
 
     @profiler
     def update(self):
-        self.wallet = self.parent.wallet
+        if self.maybe_defer_update():
+            return
         current_address = self.current_item_user_role(col=self.Columns.LABEL)
         if self.show_change == AddressTypeFilter.RECEIVING:
             addr_list = self.wallet.get_receiving_addresses()
@@ -227,7 +229,7 @@ class AddressList(MyTreeView):
             menu.addAction(_('Details'), lambda: self.parent.show_address(addr))
             persistent = QPersistentModelIndex(addr_idx)
             menu.addAction(_("Edit {}").format(addr_column_title), lambda p=persistent: self.edit(QModelIndex(p)))
-            menu.addAction(_("Request payment"), lambda: self.parent.receive_at(addr))
+            #menu.addAction(_("Request payment"), lambda: self.parent.receive_at(addr))
             if self.wallet.can_export():
                 menu.addAction(_("Private key"), lambda: self.parent.show_private_key(addr))
             if not is_multisig and not self.wallet.is_watching_only():
@@ -251,11 +253,11 @@ class AddressList(MyTreeView):
         run_hook('receive_menu', menu, addrs, self.wallet)
         menu.exec_(self.viewport().mapToGlobal(position))
 
-    def place_text_on_clipboard(self, text):
+    def place_text_on_clipboard(self, text: str, *, title: str = None) -> None:
         if is_address(text):
             try:
                 self.wallet.check_address(text)
             except InternalAddressCorruption as e:
                 self.parent.show_error(str(e))
                 raise
-        self.parent.app.clipboard().setText(text)
+        super().place_text_on_clipboard(text, title=title)

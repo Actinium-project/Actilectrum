@@ -19,6 +19,7 @@ bin/
 .idea
 .mypy_cache
 .vscode
+.dlls
 
 # icons
 actilectrum/gui/kivy/theming/light-0.png

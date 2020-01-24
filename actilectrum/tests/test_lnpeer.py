@@ -5,6 +5,8 @@ import os
 from contextlib import contextmanager
 from collections import defaultdict
 import logging
+import concurrent
+from concurrent import futures
 
 from actilectrum.network import Network
 from actilectrum.ecc import ECPrivkey
@@ -16,6 +18,7 @@ from actilectrum.lnpeer import Peer
 from actilectrum.lnutil import LNPeerAddr, Keypair, privkey_to_pubkey
 from actilectrum.lnutil import LightningPeerConnectionClosed, RemoteMisbehaving
 from actilectrum.lnutil import PaymentFailure, LnLocalFeatures
+from actilectrum.lnchannel import channel_states
 from actilectrum.lnrouter import LNPathFinder
 from actilectrum.channel_db import ChannelDB
 from actilectrum.lnworker import LNWallet, NoPathFound
@@ -117,9 +120,6 @@ class MockLNWallet:
     def save_channel(self, chan):
         print("Ignoring channel save")
 
-    def on_channels_updated(self):
-        pass
-
     preimages = {}
     get_payment_info = LNWallet.get_payment_info
     save_payment_info = LNWallet.save_payment_info
@@ -202,9 +202,9 @@ class TestPeer(ElectrumTestCase):
         w1.peer = p1
         w2.peer = p2
         # mark_open won't work if state is already OPEN.
-        # so set it to OPENING
-        self.alice_channel.set_state("OPENING")
-        self.bob_channel.set_state("OPENING")
+        # so set it to FUNDED
+        self.alice_channel._state = channel_states.FUNDED
+        self.bob_channel._state = channel_states.FUNDED
         # this populates the channel graph:
         p1.mark_open(self.alice_channel)
         p2.mark_open(self.bob_channel)
@@ -238,7 +238,7 @@ class TestPeer(ElectrumTestCase):
         gath = asyncio.gather(pay(), p1._message_loop(), p2._message_loop())
         async def f():
             await gath
-        with self.assertRaises(asyncio.CancelledError):
+        with self.assertRaises(concurrent.futures.CancelledError):
             run(f())
 
     def test_channel_usage_after_closing(self):

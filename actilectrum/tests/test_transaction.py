@@ -2,7 +2,6 @@ from typing import NamedTuple, Union
 
 from actilectrum import transaction, bitcoin
 from actilectrum.transaction import convert_raw_tx_to_hex, tx_from_any, Transaction, PartialTransaction
-from actilectrum.bitcoin import TYPE_ADDRESS
 from actilectrum.util import bh2u, bfh
 from actilectrum import keystore
 from actilectrum import bip32

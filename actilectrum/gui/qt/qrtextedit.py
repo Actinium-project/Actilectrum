@@ -2,7 +2,6 @@ from PyQt5.QtWidgets import QFileDialog
 
 from actilectrum.i18n import _
 from actilectrum.plugin import run_hook
-from actilectrum.simple_config import SimpleConfig
 
 from .util import ButtonsTextEdit, MessageBoxMixin, ColorScheme, get_parent_main_window
 

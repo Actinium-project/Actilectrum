@@ -26,19 +26,14 @@
 from enum import IntEnum
 
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
-from PyQt5.QtWidgets import QMenu, QHeaderView
+from PyQt5.QtWidgets import QMenu
 from PyQt5.QtCore import Qt, QItemSelectionModel
 
 from actilectrum.i18n import _
-from actilectrum.util import format_time, age, get_request_status
+from actilectrum.util import format_time, get_request_status
 from actilectrum.util import PR_TYPE_ONCHAIN, PR_TYPE_LN
-from actilectrum.util import PR_UNPAID, PR_EXPIRED, PR_PAID, PR_UNKNOWN, PR_INFLIGHT, pr_tooltips
-from actilectrum.lnutil import SENT, RECEIVED
+from actilectrum.util import PR_PAID
 from actilectrum.plugin import run_hook
-from actilectrum.wallet import InternalAddressCorruption
-from actilectrum.bitcoin import COIN
-from actilectrum.lnaddr import lndecode
-import actilectrum.constants as constants
 
 from .util import MyTreeView, pr_icons, read_QIcon, webopen
 
@@ -66,6 +61,7 @@ class RequestList(MyTreeView):
         super().__init__(parent, self.create_menu,
                          stretch_column=self.Columns.DESCRIPTION,
                          editable_columns=[])
+        self.wallet = self.parent.wallet
         self.setModel(QStandardItemModel(self))
         self.setSortingEnabled(True)
         self.update()
@@ -88,9 +84,12 @@ class RequestList(MyTreeView):
         if req is None:
             self.update()
             return
-        is_lightning = request_type == PR_TYPE_LN
-        text = req.get('invoice') if is_lightning else req.get('URI')
-        self.parent.receive_address_e.setText(text)
+        if request_type == PR_TYPE_LN:
+            self.parent.receive_payreq_e.setText(req.get('invoice'))
+            self.parent.receive_address_e.setText('')
+        else:
+            self.parent.receive_payreq_e.setText(req.get('URI'))
+            self.parent.receive_address_e.setText(req['address'])
 
     def refresh_status(self):
         m = self.model()
@@ -108,8 +107,7 @@ class RequestList(MyTreeView):
                 status_item.setIcon(read_QIcon(pr_icons.get(status)))
 
     def update(self):
-        self.wallet = self.parent.wallet
-        domain = self.wallet.get_receiving_addresses()
+        # not calling maybe_defer_update() as it interferes with conditional-visibility
         self.parent.update_receive_address_styling()
         self.model().clear()
         self.update_headers(self.__class__.headers)
@@ -119,7 +117,6 @@ class RequestList(MyTreeView):
                 continue
             request_type = req['type']
             timestamp = req.get('time', 0)
-            expiration = req.get('exp', None)
             amount = req.get('amount')
             message = req.get('message') or req.get('memo')
             date = format_time(timestamp)
@@ -143,7 +140,7 @@ class RequestList(MyTreeView):
             self.model().insertRow(self.model().rowCount(), items)
         self.filter()
         # sort requests by date
-        self.model().sort(self.Columns.DATE)
+        self.sortByColumn(self.Columns.DATE, Qt.AscendingOrder)
         # hide list if empty
         if self.parent.isVisible():
             b = self.model().rowCount() > 0
@@ -166,10 +163,10 @@ class RequestList(MyTreeView):
         menu = QMenu(self)
         self.add_copy_menu(menu, idx)
         if request_type == PR_TYPE_LN:
-            menu.addAction(_("Copy Request"), lambda: self.parent.do_copy('Lightning Request', req['invoice']))
+            menu.addAction(_("Copy Request"), lambda: self.parent.do_copy(req['invoice'], title='Lightning Request'))
         else:
-            menu.addAction(_("Copy Request"), lambda: self.parent.do_copy('Actinium URI', req['URI']))
-            menu.addAction(_("Copy Address"), lambda: self.parent.do_copy('Actinium Address', req['address']))
+            menu.addAction(_("Copy Request"), lambda: self.parent.do_copy(req['URI'], title='Actinium URI'))
+            menu.addAction(_("Copy Address"), lambda: self.parent.do_copy(req['address'], title='Actinium Address'))
         if 'view_url' in req:
             menu.addAction(_("View in web browser"), lambda: webopen(req['view_url']))
         menu.addAction(_("Delete"), lambda: self.parent.delete_request(key))
