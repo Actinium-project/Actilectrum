@@ -69,7 +69,7 @@ def _make_handler(k: str, v: dict) -> Callable[[bytes], Tuple[str, dict]]:
             length = _eval_exp_with_ctx(length, ma)
             ma[fieldname] = data[pos:pos+length]
             pos += length
-        assert pos == len(data), (k, pos, len(data))
+        #assert pos == len(data), (k, pos, len(data))
         return k, ma
     return handler
 
