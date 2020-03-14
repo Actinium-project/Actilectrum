@@ -551,18 +551,18 @@ class Peer(Logger):
         htlc_min = int.from_bytes(payload['htlc_minimum_msat'], 'big')
         if htlc_min > MAXIMUM_HTLC_MINIMUM_MSAT_ACCEPTED:
             raise Exception(f"Remote Lightning peer reports htlc_minimum_msat={htlc_min} mSAT," +
-                    f" which is above Electrums required maximum limit of that parameter ({MAXIMUM_HTLC_MINIMUM_MSAT_ACCEPTED} mSAT).")
+                    f" which is above Actilectrums required maximum limit of that parameter ({MAXIMUM_HTLC_MINIMUM_MSAT_ACCEPTED} mSAT).")
         remote_max = int.from_bytes(payload['max_htlc_value_in_flight_msat'], 'big')
         if remote_max < MINIMUM_MAX_HTLC_VALUE_IN_FLIGHT_ACCEPTED:
             raise Exception(f"Remote Lightning peer reports max_htlc_value_in_flight_msat at only {remote_max} mSAT" +
-                    f" which is below Electrums required minimum ({MINIMUM_MAX_HTLC_VALUE_IN_FLIGHT_ACCEPTED} mSAT).")
+                    f" which is below Actilectrums required minimum ({MINIMUM_MAX_HTLC_VALUE_IN_FLIGHT_ACCEPTED} mSAT).")
         max_accepted_htlcs = int.from_bytes(payload["max_accepted_htlcs"], 'big')
         if max_accepted_htlcs > 483:
             raise Exception("Remote Lightning peer reports max_accepted_htlcs > 483, which is a BOLT-02 protocol violation.")
         remote_to_self_delay = int.from_bytes(payload['to_self_delay'], byteorder='big')
         if remote_to_self_delay > MAXIMUM_REMOTE_TO_SELF_DELAY_ACCEPTED:
             raise Exception(f"Remote Lightning peer reports to_self_delay={remote_to_self_delay}," +
-                    f" which is above Electrums required maximum ({MAXIMUM_REMOTE_TO_SELF_DELAY_ACCEPTED})")
+                    f" which is above Actilectrums required maximum ({MAXIMUM_REMOTE_TO_SELF_DELAY_ACCEPTED})")
         remote_config = RemoteConfig(
             payment_basepoint=OnlyPubkeyKeypair(payload['payment_basepoint']),
             multisig_key=OnlyPubkeyKeypair(payload["funding_pubkey"]),
