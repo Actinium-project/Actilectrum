@@ -8,7 +8,7 @@ from distutils.version import LooseVersion
 
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QProgressBar,
-                             QHBoxLayout, QPushButton)
+                             QHBoxLayout, QPushButton, QDialog)
 
 from actilectrum import version
 from actilectrum import constants
@@ -18,9 +18,9 @@ from actilectrum.util import make_aiohttp_session
 from actilectrum.logging import Logger
 
 
-class UpdateCheck(QWidget, Logger):
+class UpdateCheck(QDialog, Logger):
     url = "https://actilectrum.org/version"
-    download_url = "https://actilectrum.org/#download"
+    download_url = "https://actilectrum.org"
 
     VERSION_ANNOUNCEMENT_SIGNING_KEYS = (
         "LWZzbv5SbiRRjBDL6dUYRdBX9Dp89RDZgG",
@@ -28,7 +28,7 @@ class UpdateCheck(QWidget, Logger):
 
     def __init__(self, main_window, latest_version=None):
         self.main_window = main_window
-        QWidget.__init__(self)
+        QDialog.__init__(self)
         self.setWindowTitle('Actilectrum - ' + _('Update Check'))
         self.content = QVBoxLayout()
         self.content.setContentsMargins(*[10]*4)
@@ -103,7 +103,9 @@ class UpdateCheckThread(QThread, Logger):
         self.main_window = main_window
 
     async def get_update_info(self):
-        async with make_aiohttp_session(proxy=self.main_window.network.proxy) as session:
+        # note: Use long timeout here as it is not critical that we get a response fast,
+        #       and it's bad not to get an update notification just because we did not wait enough.
+        async with make_aiohttp_session(proxy=self.main_window.network.proxy, timeout=120) as session:
             async with session.get(UpdateCheck.url) as result:
                 signed_version_dict = await result.json(content_type=None)
                 # example signed_version_dict:

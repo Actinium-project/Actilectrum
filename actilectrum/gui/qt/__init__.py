@@ -48,6 +48,7 @@ from actilectrum.base_wizard import GoBack
 from actilectrum.util import (UserCancelled, profiler,
                                WalletFileException, BitcoinException, get_new_wallet_name)
 from actilectrum.wallet import Wallet, Abstract_Wallet
+from actilectrum.wallet_db import WalletDB
 from actilectrum.logging import Logger
 
 from .installwizard import InstallWizard, WalletAlreadyOpenInMemory
@@ -205,6 +206,8 @@ class ElectrumGui(Logger):
         self.app.new_window_signal.emit(path, uri)
 
     def show_lightning_dialog(self):
+        if not self.daemon.network.is_lightning_running():
+            return
         if not self.lightning_dialog:
             self.lightning_dialog = LightningDialog(self)
         self.lightning_dialog.bring_to_top()
@@ -232,6 +235,7 @@ class ElectrumGui(Logger):
         run_hook('on_new_window', w)
         w.warn_if_testnet()
         w.warn_if_watching_only()
+        w.warn_if_lightning_backup()
         return w
 
     def count_wizards_in_progress(func):
@@ -306,9 +310,10 @@ class ElectrumGui(Logger):
             if storage is None:
                 wizard.path = path  # needed by trustedcoin plugin
                 wizard.run('new')
-                storage = wizard.create_storage(path)
+                storage, db = wizard.create_storage(path)
             else:
-                wizard.run_upgrades(storage)
+                db = WalletDB(storage.read(), manual_upgrades=False)
+                wizard.run_upgrades(storage, db)
         except (UserCancelled, GoBack):
             return
         except WalletAlreadyOpenInMemory as e:
@@ -316,9 +321,9 @@ class ElectrumGui(Logger):
         finally:
             wizard.terminate()
         # return if wallet creation is not complete
-        if storage is None or storage.get_action():
+        if storage is None or db.get_action():
             return
-        wallet = Wallet(storage, config=self.config)
+        wallet = Wallet(db, storage, config=self.config)
         wallet.start_network(self.daemon.network)
         self.daemon.add_wallet(wallet)
         return wallet

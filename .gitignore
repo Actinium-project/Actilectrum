@@ -19,7 +19,6 @@ bin/
 .idea
 .mypy_cache
 .vscode
-.dlls
 
 # icons
 actilectrum/gui/kivy/theming/light-0.png
@@ -38,3 +37,12 @@ contrib/build-wine/fresh_clone/
 contrib/build-linux/appimage/build/
 contrib/build-linux/appimage/.cache/
 contrib/android_debug.keystore
+
+# shared objects
+actilectrum/*.so
+actilectrum/*.so.0
+actilectrum/*.dll
+actilectrum/*.dylib
+
+.history
+contrib/build-wine/contrib

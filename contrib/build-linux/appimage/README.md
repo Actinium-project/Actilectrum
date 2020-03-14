@@ -46,9 +46,6 @@ see [issue #5159](https://github.com/spesmilo/electrum/issues/5159).
 ## FAQ
 
 ### How can I see what is included in the AppImage?
-<<<<<<< HEAD
-Execute the binary as follows: `./actilectrum*.AppImage --appimage-extract`
-=======
 Execute the binary as follows: `./electrum*.AppImage --appimage-extract`
 
 ### How to investigate diff between binaries if reproducibility fails?
@@ -67,4 +64,3 @@ cat d
 Useful binary comparison tools:
 - vbindiff
 - diffoscope
->>>>>>> 738fc9a8ea542faec20344f5fb5bed51625da5e7
