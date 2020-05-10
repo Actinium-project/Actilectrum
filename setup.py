@@ -78,10 +78,11 @@ setup(
         'actilectrum': 'actilectrum'
     },
     package_data={
-        '': ['*.txt', '*.json', '*.ttf', '*.otf'],
+        '': ['*.txt', '*.json', '*.ttf', '*.otf', '*.csv'],
         'actilectrum': [
             'wordlist/*.txt',
             'locale/*/LC_MESSAGES/electrum.mo',
+            'lnwire/*.csv',
         ],
         'actilectrum.gui': [
             'icons/*',

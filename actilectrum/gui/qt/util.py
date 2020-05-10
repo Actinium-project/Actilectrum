@@ -20,7 +20,8 @@ from PyQt5.QtWidgets import (QPushButton, QLabel, QMessageBox, QHBoxLayout,
                              QAbstractItemView, QVBoxLayout, QLineEdit,
                              QStyle, QDialog, QGroupBox, QButtonGroup, QRadioButton,
                              QFileDialog, QWidget, QToolButton, QTreeView, QPlainTextEdit,
-                             QHeaderView, QApplication, QToolTip, QTreeWidget, QStyledItemDelegate)
+                             QHeaderView, QApplication, QToolTip, QTreeWidget, QStyledItemDelegate,
+                             QMenu)
 
 from actilectrum.i18n import _, languages
 from actilectrum.util import FileImportFailed, FileExportFailed, make_aiohttp_session, resource_path
@@ -160,6 +161,8 @@ class Buttons(QHBoxLayout):
         QHBoxLayout.__init__(self)
         self.addStretch(1)
         for b in buttons:
+            if b is None:
+                continue
             self.addWidget(b)
 
 class CloseButton(QPushButton):
@@ -658,7 +661,7 @@ class MyTreeView(QTreeView):
     def toggle_toolbar(self, config=None):
         self.show_toolbar(not self.toolbar_shown, config)
 
-    def add_copy_menu(self, menu, idx):
+    def add_copy_menu(self, menu: QMenu, idx) -> QMenu:
         cc = menu.addMenu(_("Copy"))
         for column in self.Columns:
             column_title = self.model().horizontalHeaderItem(column).text()
@@ -669,6 +672,7 @@ class MyTreeView(QTreeView):
             cc.addAction(column_title,
                          lambda text=clipboard_data, title=column_title:
                          self.place_text_on_clipboard(text, title=title))
+        return cc
 
     def place_text_on_clipboard(self, text: str, *, title: str = None) -> None:
         self.parent.do_copy(text, title=title)
@@ -744,6 +748,18 @@ class ButtonsTextEdit(QPlainTextEdit, ButtonsWidget):
         o = QPlainTextEdit.resizeEvent(self, e)
         self.resizeButtons()
         return o
+
+
+class PasswordLineEdit(QLineEdit):
+    def __init__(self, *args, **kwargs):
+        QLineEdit.__init__(self, *args, **kwargs)
+        self.setEchoMode(QLineEdit.Password)
+
+    def clear(self):
+        # Try to actually overwrite the memory.
+        # This is really just a best-effort thing...
+        self.setText(len(self.text()) * " ")
+        super().clear()
 
 
 class TaskThread(QThread):

@@ -27,10 +27,13 @@ import queue
 from collections import defaultdict
 from typing import Sequence, List, Tuple, Optional, Dict, NamedTuple, TYPE_CHECKING, Set
 
+import attr
+
 from .util import bh2u, profiler
 from .logging import Logger
-from .lnutil import NUM_MAX_EDGES_IN_PAYMENT_PATH, ShortChannelID
-from .channel_db import ChannelDB, Policy
+from .lnutil import (NUM_MAX_EDGES_IN_PAYMENT_PATH, ShortChannelID, LnFeatures,
+                     NBLOCK_CLTV_EXPIRY_TOO_FAR_INTO_FUTURE)
+from .channel_db import ChannelDB, Policy, NodeInfo
 
 if TYPE_CHECKING:
     from .lnchannel import Channel
@@ -47,13 +50,15 @@ def fee_for_edge_msat(forwarded_amount_msat: int, fee_base_msat: int, fee_propor
            + (forwarded_amount_msat * fee_proportional_millionths // 1_000_000)
 
 
-class RouteEdge(NamedTuple):
+@attr.s
+class RouteEdge:
     """if you travel through short_channel_id, you will reach node_id"""
-    node_id: bytes
-    short_channel_id: ShortChannelID
-    fee_base_msat: int
-    fee_proportional_millionths: int
-    cltv_expiry_delta: int
+    node_id = attr.ib(type=bytes, kw_only=True)
+    short_channel_id = attr.ib(type=ShortChannelID, kw_only=True)
+    fee_base_msat = attr.ib(type=int, kw_only=True)
+    fee_proportional_millionths = attr.ib(type=int, kw_only=True)
+    cltv_expiry_delta = attr.ib(type=int, kw_only=True)
+    node_features = attr.ib(type=int, kw_only=True)  # note: for end node!
 
     def fee_for_edge(self, amount_msat: int) -> int:
         return fee_for_edge_msat(forwarded_amount_msat=amount_msat,
@@ -62,14 +67,16 @@ class RouteEdge(NamedTuple):
 
     @classmethod
     def from_channel_policy(cls, channel_policy: 'Policy',
-                            short_channel_id: bytes, end_node: bytes) -> 'RouteEdge':
+                            short_channel_id: bytes, end_node: bytes, *,
+                            node_info: Optional[NodeInfo]) -> 'RouteEdge':
         assert isinstance(short_channel_id, bytes)
         assert type(end_node) is bytes
-        return RouteEdge(end_node,
-                         ShortChannelID.normalize(short_channel_id),
-                         channel_policy.fee_base_msat,
-                         channel_policy.fee_proportional_millionths,
-                         channel_policy.cltv_expiry_delta)
+        return RouteEdge(node_id=end_node,
+                         short_channel_id=ShortChannelID.normalize(short_channel_id),
+                         fee_base_msat=channel_policy.fee_base_msat,
+                         fee_proportional_millionths=channel_policy.fee_proportional_millionths,
+                         cltv_expiry_delta=channel_policy.cltv_expiry_delta,
+                         node_features=node_info.features if node_info else 0)
 
     def is_sane_to_use(self, amount_msat: int) -> bool:
         # TODO revise ad-hoc heuristics
@@ -80,6 +87,10 @@ class RouteEdge(NamedTuple):
         if not is_fee_sane(total_fee, payment_amount_msat=amount_msat):
             return False
         return True
+
+    def has_feature_varonion(self) -> bool:
+        features = self.node_features
+        return bool(features & LnFeatures.VAR_ONION_REQ or features & LnFeatures.VAR_ONION_OPT)
 
 
 LNPaymentRoute = Sequence[RouteEdge]
@@ -99,8 +110,7 @@ def is_route_sane_to_use(route: LNPaymentRoute, invoice_amount_msat: int, min_fi
         cltv += route_edge.cltv_expiry_delta
     total_fee = amt - invoice_amount_msat
     # TODO revise ad-hoc heuristics
-    # cltv cannot be more than 2 months
-    if cltv > 60 * 144:
+    if cltv > NBLOCK_CLTV_EXPIRY_TOO_FAR_INTO_FUTURE:
         return False
     if not is_fee_sane(total_fee, payment_amount_msat=invoice_amount_msat):
         return False
@@ -108,8 +118,8 @@ def is_route_sane_to_use(route: LNPaymentRoute, invoice_amount_msat: int, min_fi
 
 
 def is_fee_sane(fee_msat: int, *, payment_amount_msat: int) -> bool:
-    # fees <= 2 sat are fine
-    if fee_msat <= 2_000:
+    # fees <= 5 sat are fine
+    if fee_msat <= 5_000:
         return True
     # fees <= 1 % of payment are fine
     if 100 * fee_msat <= payment_amount_msat:
@@ -154,7 +164,9 @@ class LNPathFinder(Logger):
         if channel_policy.htlc_maximum_msat is not None and \
                 payment_amt_msat > channel_policy.htlc_maximum_msat:
             return float('inf'), 0  # payment amount too large
-        route_edge = RouteEdge.from_channel_policy(channel_policy, short_channel_id, end_node)
+        node_info = self.channel_db.get_node_info_for_node_id(node_id=end_node)
+        route_edge = RouteEdge.from_channel_policy(channel_policy, short_channel_id, end_node,
+                                                   node_info=node_info)
         if not route_edge.is_sane_to_use(payment_amt_msat):
             return float('inf'), 0  # thanks but no thanks
 
@@ -172,25 +184,12 @@ class LNPathFinder(Logger):
         overall_cost = base_cost + fee_msat + cltv_cost
         return overall_cost, fee_msat
 
-    @profiler
-    def find_path_for_payment(self, nodeA: bytes, nodeB: bytes,
-                              invoice_amount_msat: int, *,
-                              my_channels: Dict[ShortChannelID, 'Channel'] = None) \
-            -> Optional[Sequence[Tuple[bytes, bytes]]]:
-        """Return a path from nodeA to nodeB.
-
-        Returns a list of (node_id, short_channel_id) representing a path.
-        To get from node ret[n][0] to ret[n+1][0], use channel ret[n+1][1];
-        i.e. an element reads as, "to get to node_id, travel through short_channel_id"
-        """
-        assert type(nodeA) is bytes
-        assert type(nodeB) is bytes
-        assert type(invoice_amount_msat) is int
-        if my_channels is None: my_channels = {}
+    def get_distances(self, nodeA: bytes, nodeB: bytes,
+                      invoice_amount_msat: int, *,
+                      my_channels: Dict[ShortChannelID, 'Channel'] = None) \
+                      -> Optional[Sequence[Tuple[bytes, bytes]]]:
         # note: we don't lock self.channel_db, so while the path finding runs,
         #       the underlying graph could potentially change... (not good but maybe ~OK?)
-
-        # FIXME paths cannot be longer than 20 edges (onion packet)...
 
         # run Dijkstra
         # The search is run in the REVERSE direction, from nodeB to nodeA,
@@ -201,29 +200,6 @@ class LNPathFinder(Logger):
         nodes_to_explore = queue.PriorityQueue()
         nodes_to_explore.put((0, invoice_amount_msat, nodeB))  # order of fields (in tuple) matters!
 
-        def inspect_edge():
-            is_mine = edge_channel_id in my_channels
-            if is_mine:
-                if edge_startnode == nodeA:  # payment outgoing, on our channel
-                    if not my_channels[edge_channel_id].can_pay(amount_msat):
-                        return
-                else:  # payment incoming, on our channel. (funny business, cycle weirdness)
-                    assert edge_endnode == nodeA, (bh2u(edge_startnode), bh2u(edge_endnode))
-                    pass  # TODO?
-            edge_cost, fee_for_edge_msat = self._edge_cost(
-                edge_channel_id,
-                start_node=edge_startnode,
-                end_node=edge_endnode,
-                payment_amt_msat=amount_msat,
-                ignore_costs=(edge_startnode == nodeA),
-                is_mine=is_mine,
-                my_channels=my_channels)
-            alt_dist_to_neighbour = distance_from_start[edge_endnode] + edge_cost
-            if alt_dist_to_neighbour < distance_from_start[edge_startnode]:
-                distance_from_start[edge_startnode] = alt_dist_to_neighbour
-                prev_node[edge_startnode] = edge_endnode, edge_channel_id
-                amount_to_forward_msat = amount_msat + fee_for_edge_msat
-                nodes_to_explore.put((alt_dist_to_neighbour, amount_to_forward_msat, edge_startnode))
 
         # main loop of search
         while nodes_to_explore.qsize() > 0:
@@ -241,11 +217,56 @@ class LNPathFinder(Logger):
                     continue
                 channel_info = self.channel_db.get_channel_info(edge_channel_id, my_channels=my_channels)
                 edge_startnode = channel_info.node2_id if channel_info.node1_id == edge_endnode else channel_info.node1_id
-                inspect_edge()
-        else:
+                is_mine = edge_channel_id in my_channels
+                if is_mine:
+                    if edge_startnode == nodeA:  # payment outgoing, on our channel
+                        if not my_channels[edge_channel_id].can_pay(amount_msat, check_frozen=True):
+                            continue
+                    else:  # payment incoming, on our channel. (funny business, cycle weirdness)
+                        assert edge_endnode == nodeA, (bh2u(edge_startnode), bh2u(edge_endnode))
+                        if not my_channels[edge_channel_id].can_receive(amount_msat, check_frozen=True):
+                            continue
+                edge_cost, fee_for_edge_msat = self._edge_cost(
+                    edge_channel_id,
+                    start_node=edge_startnode,
+                    end_node=edge_endnode,
+                    payment_amt_msat=amount_msat,
+                    ignore_costs=(edge_startnode == nodeA),
+                    is_mine=is_mine,
+                    my_channels=my_channels)
+                alt_dist_to_neighbour = distance_from_start[edge_endnode] + edge_cost
+                if alt_dist_to_neighbour < distance_from_start[edge_startnode]:
+                    distance_from_start[edge_startnode] = alt_dist_to_neighbour
+                    prev_node[edge_startnode] = edge_endnode, edge_channel_id
+                    amount_to_forward_msat = amount_msat + fee_for_edge_msat
+                    nodes_to_explore.put((alt_dist_to_neighbour, amount_to_forward_msat, edge_startnode))
+
+        return prev_node
+
+    @profiler
+    def find_path_for_payment(self, nodeA: bytes, nodeB: bytes,
+                              invoice_amount_msat: int, *,
+                              my_channels: Dict[ShortChannelID, 'Channel'] = None) \
+            -> Optional[Sequence[Tuple[bytes, bytes]]]:
+        """Return a path from nodeA to nodeB.
+
+        Returns a list of (node_id, short_channel_id) representing a path.
+        To get from node ret[n][0] to ret[n+1][0], use channel ret[n+1][1];
+        i.e. an element reads as, "to get to node_id, travel through short_channel_id"
+        """
+        assert type(nodeA) is bytes
+        assert type(nodeB) is bytes
+        assert type(invoice_amount_msat) is int
+        if my_channels is None:
+            my_channels = {}
+
+        prev_node = self.get_distances(nodeA, nodeB, invoice_amount_msat, my_channels=my_channels)
+
+        if nodeA not in prev_node:
             return None  # no path found
 
         # backtrack from search_end (nodeA) to search_start (nodeB)
+        # FIXME paths cannot be longer than 20 edges (onion packet)...
         edge_startnode = nodeA
         path = []
         while edge_startnode != nodeB:
@@ -267,6 +288,8 @@ class LNPathFinder(Logger):
                                                                  my_channels=my_channels)
             if channel_policy is None:
                 raise NoChannelPolicy(short_channel_id)
-            route.append(RouteEdge.from_channel_policy(channel_policy, short_channel_id, node_id))
+            node_info = self.channel_db.get_node_info_for_node_id(node_id=node_id)
+            route.append(RouteEdge.from_channel_policy(channel_policy, short_channel_id, node_id,
+                                                       node_info=node_info))
             prev_node_id = node_id
         return route

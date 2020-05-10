@@ -16,13 +16,15 @@ home = 'C:\\actilectrum\\'
 
 # see https://github.com/pyinstaller/pyinstaller/issues/2005
 hiddenimports = []
+hiddenimports += collect_submodules('pkg_resources')  # workaround for https://github.com/pypa/setuptools/issues/1963
 hiddenimports += collect_submodules('trezorlib')
 hiddenimports += collect_submodules('safetlib')
 hiddenimports += collect_submodules('btchip')
 hiddenimports += collect_submodules('keepkeylib')
 hiddenimports += collect_submodules('websocket')
 hiddenimports += collect_submodules('ckcc')
-hiddenimports += ['PyQt5.QtPrintSupport']  # needed by Revealer
+hiddenimports += collect_submodules('bitbox02')
+hiddenimports += ['_scrypt', 'PyQt5.QtPrintSupport']  # needed by Revealer
 
 
 binaries = []
@@ -35,6 +37,7 @@ binaries += [('C:/tmp/libusb-1.0.dll', '.')]
 
 datas = [
     (home+'actilectrum/*.json', 'actilectrum'),
+    (home+'actilectrum/lnwire/*.csv', 'actilectrum/lnwire'),
     (home+'actilectrum/wordlist/english.txt', 'actilectrum/wordlist'),
     (home+'actilectrum/locale', 'actilectrum/locale'),
     (home+'actilectrum/plugins', 'actilectrum/plugins'),
@@ -46,6 +49,7 @@ datas += collect_data_files('safetlib')
 datas += collect_data_files('btchip')
 datas += collect_data_files('keepkeylib')
 datas += collect_data_files('ckcc')
+datas += collect_data_files('bitbox02')
 datas += collect_data_files('jsonrpcserver')
 datas += collect_data_files('jsonrpcclient')
 

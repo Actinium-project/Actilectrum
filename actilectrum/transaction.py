@@ -235,6 +235,12 @@ class TxInput:
             d['witness'] = self.witness.hex()
         return d
 
+    def witness_elements(self)-> Sequence[bytes]:
+        vds = BCDataStream()
+        vds.write(self.witness)
+        n = vds.read_compact_size()
+        return list(vds.read_bytes(vds.read_compact_size()) for i in range(n))
+
 
 class BCDataStream(object):
     """Workalike python implementation of Bitcoin's CDataStream class."""
@@ -288,6 +294,10 @@ class BCDataStream(object):
             return bytes(result)
         else:
             raise SerializationError('attempt to read past end of buffer')
+
+    def write_bytes(self, _bytes: Union[bytes, bytearray], length: int):
+        assert len(_bytes) == length, len(_bytes)
+        self.write(_bytes)
 
     def can_read_more(self) -> bool:
         if not self.input:

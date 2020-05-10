@@ -34,7 +34,8 @@ from actilectrum.transaction import Transaction, PartialTransaction
 from actilectrum.simple_config import FEERATE_WARNING_HIGH_FEE
 from actilectrum.wallet import InternalAddressCorruption
 
-from .util import WindowModalDialog, ColorScheme, HelpLabel, Buttons, CancelButton, BlockingWaitingDialog
+from .util import (WindowModalDialog, ColorScheme, HelpLabel, Buttons, CancelButton,
+                   BlockingWaitingDialog, PasswordLineEdit)
 
 from .fee_slider import FeeSlider
 
@@ -103,7 +104,13 @@ class TxEditor:
         if use_rbf:
             self.tx.set_rbf(True)
 
-
+    def have_enough_funds_assuming_zero_fees(self) -> bool:
+        try:
+            tx = self.make_tx(0)
+        except NotEnoughFunds:
+            return False
+        else:
+            return True
 
 
 
@@ -144,8 +151,7 @@ class ConfirmTxDialog(TxEditor, WindowModalDialog):
         grid.addWidget(self.message_label, 6, 0, 1, -1)
         self.pw_label = QLabel(_('Password'))
         self.pw_label.setVisible(self.password_required)
-        self.pw = QLineEdit()
-        self.pw.setEchoMode(2)
+        self.pw = PasswordLineEdit()
         self.pw.setVisible(self.password_required)
         grid.addWidget(self.pw_label, 8, 0)
         grid.addWidget(self.pw, 8, 1, 1, -1)
@@ -197,10 +203,22 @@ class ConfirmTxDialog(TxEditor, WindowModalDialog):
         self.pw.setEnabled(True)
         self.send_button.setEnabled(True)
 
+    def _update_amount_label(self):
+        tx = self.tx
+        if self.output_value == '!':
+            if tx:
+                amount = tx.output_value()
+                amount_str = self.main_window.format_amount_and_units(amount)
+            else:
+                amount_str = "max"
+        else:
+            amount = self.output_value
+            amount_str = self.main_window.format_amount_and_units(amount)
+        self.amount_label.setText(amount_str)
+
     def update(self):
         tx = self.tx
-        amount = tx.output_value() if self.output_value == '!' else self.output_value
-        self.amount_label.setText(self.main_window.format_amount_and_units(amount))
+        self._update_amount_label()
 
         if self.not_enough_funds:
             text = _("Not enough funds")

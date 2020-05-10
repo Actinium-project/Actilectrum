@@ -45,6 +45,7 @@ For elliptic curve operations, `libsecp256k1`_ is a required dependency::
 Alternatively, when running from a cloned repository, a script is provided to build
 libsecp256k1 yourself::
 
+    sudo apt-get install automake libtool
     ./contrib/make_libsecp256k1.sh
 
 Due to the need for fast symmetric ciphers, either one of `pycryptodomex`_
@@ -78,6 +79,8 @@ You can also install Actilectrum on your system, by running this command::
 
 This will download and install the Python dependencies used by
 Actilectrum instead of using the 'packages' directory.
+It will also place an executable named :code:`electrum-ltc` in :code:`~/.local/bin`,
+so make sure that is on your :code:`PATH` variable.
 
 
 Development version (git clone)
@@ -91,7 +94,7 @@ Check out the code from GitHub::
 
 Run install (this should install dependencies)::
 
-    python3 -m pip install --user .
+    python3 -m pip install --user -e .
 
 
 Create translations (optional)::
@@ -99,6 +102,9 @@ Create translations (optional)::
     sudo apt-get install python-requests gettext
     ./contrib/pull_locale
 
+Finally, to start Actilectrum::
+
+    ./run_electrum
 
 
 
