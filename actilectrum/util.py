@@ -23,7 +23,8 @@
 import binascii
 import os, sys, re, json
 from collections import defaultdict, OrderedDict
-from typing import NamedTuple, Union, TYPE_CHECKING, Tuple, Optional, Callable, Any
+from typing import (NamedTuple, Union, TYPE_CHECKING, Tuple, Optional, Callable, Any,
+                    Sequence, Dict, Generic, TypeVar)
 from datetime import datetime
 import decimal
 from decimal import Decimal
@@ -40,11 +41,16 @@ import json
 import time
 from typing import NamedTuple, Optional
 import ssl
+import ipaddress
+import random
 
 import aiohttp
-from aiohttp_socks import SocksConnector, SocksVer
+from aiohttp_socks import ProxyConnector, ProxyType
+import aiorpcx
 from aiorpcx import TaskGroup
 import certifi
+import dns.resolver
+import ecdsa
 
 from .i18n import _
 from .logging import get_logger, Logger
@@ -70,6 +76,66 @@ base_units_inverse = inv_dict(base_units)
 base_units_list = ['ACM', 'mACM', 'uACM', 'sat']  # list(dict) does not guarantee order
 
 DECIMAL_POINT_DEFAULT = 8  # ACM
+
+# types of payment requests
+PR_TYPE_ONCHAIN = 0
+PR_TYPE_LN = 2
+
+# status of payment requests
+PR_UNPAID   = 0
+PR_EXPIRED  = 1
+PR_UNKNOWN  = 2     # sent but not propagated
+PR_PAID     = 3     # send and propagated
+PR_INFLIGHT = 4     # unconfirmed
+PR_FAILED   = 5
+PR_ROUTING  = 6
+
+pr_color = {
+    PR_UNPAID:   (.7, .7, .7, 1),
+    PR_PAID:     (.2, .9, .2, 1),
+    PR_UNKNOWN:  (.7, .7, .7, 1),
+    PR_EXPIRED:  (.9, .2, .2, 1),
+    PR_INFLIGHT: (.9, .6, .3, 1),
+    PR_FAILED:   (.9, .2, .2, 1),
+    PR_ROUTING: (.9, .6, .3, 1),
+}
+
+pr_tooltips = {
+    PR_UNPAID:_('Pending'),
+    PR_PAID:_('Paid'),
+    PR_UNKNOWN:_('Unknown'),
+    PR_EXPIRED:_('Expired'),
+    PR_INFLIGHT:_('In progress'),
+    PR_FAILED:_('Failed'),
+    PR_ROUTING: _('Computing route...'),
+}
+
+PR_DEFAULT_EXPIRATION_WHEN_CREATING = 24*60*60  # 1 day
+pr_expiration_values = {
+    0: _('Never'),
+    10*60: _('10 minutes'),
+    60*60: _('1 hour'),
+    24*60*60: _('1 day'),
+    7*24*60*60: _('1 week'),
+}
+assert PR_DEFAULT_EXPIRATION_WHEN_CREATING in pr_expiration_values
+
+
+def get_request_status(req):
+    status = req['status']
+    exp = req.get('exp', 0) or 0
+    if req.get('type') == PR_TYPE_LN and exp == 0:
+        status = PR_EXPIRED  # for BOLT-11 invoices, exp==0 means 0 seconds
+    if req['status'] == PR_UNPAID and exp > 0 and req['time'] + req['exp'] < time.time():
+        status = PR_EXPIRED
+    status_str = pr_tooltips[status]
+    if status == PR_UNPAID:
+        if exp > 0:
+            expiration = exp + req['time']
+            status_str = _('Expires') + ' ' + age(expiration, include_seconds=True)
+        else:
+            status_str = _('Pending')
+    return status, status_str
 
 
 class UnknownBaseUnit(Exception): pass
@@ -99,6 +165,11 @@ class NotEnoughFunds(Exception):
 class NoDynamicFeeEstimates(Exception):
     def __str__(self):
         return _('Dynamic fee estimates not available')
+
+
+class MultipleSpendMaxTxOutputs(Exception):
+    def __str__(self):
+        return _('At most one output can be set to spend max')
 
 
 class InvalidPassword(Exception):
@@ -132,6 +203,9 @@ class UserFacingException(Exception):
     """Exception that contains information intended to be shown to the user."""
 
 
+class InvoiceError(UserFacingException): pass
+
+
 # Throw this exception to unwind the stack like when an error occurs.
 # However unlike other exceptions the user won't be informed.
 class UserCancelled(Exception):
@@ -145,13 +219,15 @@ class Satoshis(object):
 
     def __new__(cls, value):
         self = super(Satoshis, cls).__new__(cls)
+        # note: 'value' sometimes has msat precision
         self.value = value
         return self
 
     def __repr__(self):
-        return 'Satoshis(%d)'%self.value
+        return f'Satoshis({self.value})'
 
     def __str__(self):
+        # note: precision is truncated to satoshis here
         return format_satoshis(self.value)
 
     def __eq__(self, other):
@@ -203,9 +279,14 @@ class Fiat(object):
 class MyEncoder(json.JSONEncoder):
     def default(self, obj):
         # note: this does not get called for namedtuples :(  https://bugs.python.org/issue30343
-        from .transaction import Transaction
+        from .transaction import Transaction, TxOutput
+        from .lnutil import UpdateAddHtlc
+        if isinstance(obj, UpdateAddHtlc):
+            return obj.to_tuple()
         if isinstance(obj, Transaction):
-            return obj.as_dict()
+            return obj.serialize()
+        if isinstance(obj, TxOutput):
+            return obj.to_legacy_tuple()
         if isinstance(obj, Satoshis):
             return str(obj)
         if isinstance(obj, Fiat):
@@ -216,7 +297,11 @@ class MyEncoder(json.JSONEncoder):
             return obj.isoformat(' ')[:-3]
         if isinstance(obj, set):
             return list(obj)
-        return super().default(obj)
+        if isinstance(obj, bytes): # for nametuples in lnchannel
+            return obj.hex()
+        if hasattr(obj, 'to_json') and callable(obj.to_json):
+            return obj.to_json()
+        return super(MyEncoder, self).default(obj)
 
 
 class ThreadJob(Logger):
@@ -356,11 +441,26 @@ def profiler(func):
     return lambda *args, **kw_args: do_profile(args, kw_args)
 
 
+def android_ext_dir():
+    from android.storage import primary_external_storage_path
+    return primary_external_storage_path()
+
+def android_backup_dir():
+    d = os.path.join(android_ext_dir(), 'org.actilectrum.actilectrum')
+    if not os.path.exists(d):
+        os.mkdir(d)
+    return d
+
 def android_data_dir():
     import jnius
     PythonActivity = jnius.autoclass('org.kivy.android.PythonActivity')
     return PythonActivity.mActivity.getFilesDir().getPath() + '/data'
 
+def get_backup_dir(config):
+    if 'ANDROID_DATA' in os.environ:
+        return android_backup_dir() if config.get('android_backups') else None
+    else:
+        return config.get('backup_dir')
 
 def ensure_sparse_file(filename):
     # On modern Linux, no need to do anything.
@@ -397,7 +497,12 @@ def assert_file_in_datadir_available(path, config_path):
 
 
 def standardize_path(path):
-    return os.path.normcase(os.path.realpath(os.path.abspath(path)))
+    return os.path.normcase(
+            os.path.realpath(
+                os.path.abspath(
+                    os.path.expanduser(
+                        path
+    ))))
 
 
 def get_new_wallet_name(wallet_folder: str) -> str:
@@ -468,8 +573,16 @@ def bh2u(x: bytes) -> str:
     return x.hex()
 
 
+def xor_bytes(a: bytes, b: bytes) -> bytes:
+    size = min(len(a), len(b))
+    return ((int.from_bytes(a[:size], "big") ^ int.from_bytes(b[:size], "big"))
+            .to_bytes(size, "big"))
+
+
 def user_dir():
-    if 'ANDROID_DATA' in os.environ:
+    if "ELECTRUMDIR" in os.environ:
+        return os.environ["ELECTRUMDIR"]
+    elif 'ANDROID_DATA' in os.environ:
         return android_data_dir()
     elif os.name == 'posix':
         return os.path.join(os.environ["HOME"], ".actilectrum")
@@ -528,19 +641,23 @@ def chunks(items, size: int):
         yield items[i: i + size]
 
 
-def format_satoshis_plain(x, decimal_point = 8):
+def format_satoshis_plain(x, decimal_point = 8) -> str:
     """Display a satoshi amount scaled.  Always uses a '.' as a decimal
     point and has no thousands separator"""
+    if x == '!':
+        return 'max'
     scale_factor = pow(10, decimal_point)
     return "{:.8f}".format(Decimal(x) / scale_factor).rstrip('0').rstrip('.')
 
 
-DECIMAL_POINT = localeconv()['decimal_point']
+DECIMAL_POINT = localeconv()['decimal_point']  # type: str
 
 
-def format_satoshis(x, num_zeros=0, decimal_point=8, precision=None, is_diff=False, whitespaces=False):
+def format_satoshis(x, num_zeros=0, decimal_point=8, precision=None, is_diff=False, whitespaces=False) -> str:
     if x is None:
         return 'unknown'
+    if x == '!':
+        return 'max'
     if precision is None:
         precision = decimal_point
     # format string
@@ -577,7 +694,7 @@ def format_fee_satoshis(fee, *, num_zeros=0, precision=None):
     return format_satoshis(fee, num_zeros=num_zeros, decimal_point=0, precision=precision)
 
 
-def quantize_feerate(fee):
+def quantize_feerate(fee) -> Union[None, Decimal, int]:
     """Strip sat/byte fee rate of excess precision."""
     if fee is None:
         return None
@@ -612,22 +729,11 @@ def time_difference(distance_in_time, include_seconds):
     distance_in_seconds = int(round(abs(distance_in_time.days * 86400 + distance_in_time.seconds)))
     distance_in_minutes = int(round(distance_in_seconds/60))
 
-    if distance_in_minutes <= 1:
+    if distance_in_minutes == 0:
         if include_seconds:
-            for remainder in [5, 10, 20]:
-                if distance_in_seconds < remainder:
-                    return "less than %s seconds" % remainder
-            if distance_in_seconds < 40:
-                return "half a minute"
-            elif distance_in_seconds < 60:
-                return "less than a minute"
-            else:
-                return "1 minute"
+            return "%s seconds" % distance_in_seconds
         else:
-            if distance_in_minutes == 0:
-                return "less than a minute"
-            else:
-                return "1 minute"
+            return "less than a minute"
     elif distance_in_minutes < 45:
         return "%s minutes" % distance_in_minutes
     elif distance_in_minutes < 90:
@@ -649,8 +755,6 @@ def time_difference(distance_in_time, include_seconds):
 
 mainnet_block_explorers = {
     'Explorer': ('https://explorer.actinium.org/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
-    'Explorer2': ('https://explorer2.actinium.org/',
                         {'tx': 'tx/', 'addr': 'address/'}),
 }
 
@@ -758,7 +862,7 @@ def parse_URI(uri: str, on_pr: Callable = None, *, loop=None) -> dict:
             raise InvalidBitcoinURI(f"failed to parse 'exp' field: {repr(e)}") from e
     if 'sig' in out:
         try:
-            out['sig'] = bh2u(bitcoin.base_decode(out['sig'], None, base=58))
+            out['sig'] = bh2u(bitcoin.base_decode(out['sig'], base=58))
         except Exception as e:
             raise InvalidBitcoinURI(f"failed to parse 'sig' field: {repr(e)}") from e
 
@@ -801,6 +905,16 @@ def create_bip21_uri(addr, amount_sat: Optional[int], message: Optional[str],
         query.append(f"{k}={v}")
     p = urllib.parse.ParseResult(scheme='actinium', netloc='', path=addr, params='', query='&'.join(query), fragment='')
     return str(urllib.parse.urlunparse(p))
+
+
+def maybe_extract_bolt11_invoice(data: str) -> Optional[str]:
+    data = data.strip()  # whitespaces
+    data = data.lower()
+    if data.startswith('lightning:ln'):
+        data = data[10:]
+    if data.startswith('ln'):
+        return data
+    return None
 
 
 # Python bug (http://bugs.python.org/issue1927) causes raw_input
@@ -918,14 +1032,17 @@ def ignore_exceptions(func):
     async def wrapper(*args, **kwargs):
         try:
             return await func(*args, **kwargs)
-        except BaseException as e:
+        except asyncio.CancelledError:
+            # note: with python 3.8, CancelledError no longer inherits Exception, so this catch is redundant
+            raise
+        except Exception as e:
             pass
     return wrapper
 
 
 class TxMinedInfo(NamedTuple):
     height: int                        # height of block that mined tx
-    conf: Optional[int] = None         # number of confirmations (None means unknown)
+    conf: Optional[int] = None         # number of confirmations, SPV verified (None means unknown)
     timestamp: Optional[int] = None    # timestamp of block that mined tx
     txpos: Optional[int] = None        # position of tx in serialized block
     header_hash: Optional[str] = None  # hash of block that mined tx
@@ -935,14 +1052,16 @@ def make_aiohttp_session(proxy: Optional[dict], headers=None, timeout=None):
     if headers is None:
         headers = {'User-Agent': 'Actilectrum'}
     if timeout is None:
-        timeout = aiohttp.ClientTimeout(total=30)
+        # The default timeout is high intentionally.
+        # DNS on some systems can be really slow, see e.g. #5337
+        timeout = aiohttp.ClientTimeout(total=45)
     elif isinstance(timeout, (int, float)):
         timeout = aiohttp.ClientTimeout(total=timeout)
     ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_path)
 
     if proxy:
-        connector = SocksConnector(
-            socks_ver=SocksVer.SOCKS5 if proxy['mode'] == 'socks5' else SocksVer.SOCKS4,
+        connector = ProxyConnector(
+            proxy_type=ProxyType.SOCKS5 if proxy['mode'] == 'socks5' else ProxyType.SOCKS4,
             host=proxy['host'],
             port=int(proxy['port']),
             username=proxy.get('user', None),
@@ -978,30 +1097,30 @@ class NetworkJobOnDefaultServer(Logger):
         self._restart_lock = asyncio.Lock()
         self._reset()
         asyncio.run_coroutine_threadsafe(self._restart(), network.asyncio_loop)
-        network.register_callback(self._restart, ['default_server_changed'])
+        register_callback(self._restart, ['default_server_changed'])
 
     def _reset(self):
         """Initialise fields. Called every time the underlying
         server connection changes.
         """
-        self.group = SilentTaskGroup()
+        self.taskgroup = SilentTaskGroup()
 
     async def _start(self, interface: 'Interface'):
         self.interface = interface
-        await interface.group.spawn(self._start_tasks)
+        await interface.taskgroup.spawn(self._start_tasks)
 
     async def _start_tasks(self):
-        """Start tasks in self.group. Called every time the underlying
+        """Start tasks in self.taskgroup. Called every time the underlying
         server connection changes.
         """
         raise NotImplementedError()  # implemented by subclasses
 
     async def stop(self):
-        self.network.unregister_callback(self._restart)
+        unregister_callback(self._restart)
         await self._stop()
 
     async def _stop(self):
-        await self.group.cancel_remaining()
+        await self.taskgroup.cancel_remaining()
 
     @log_exceptions
     async def _restart(self, *args):
@@ -1115,3 +1234,161 @@ def multisig_type(wallet_type):
     if match:
         match = [int(x) for x in match.group(1, 2)]
     return match
+
+
+def is_ip_address(x: Union[str, bytes]) -> bool:
+    if isinstance(x, bytes):
+        x = x.decode("utf-8")
+    try:
+        ipaddress.ip_address(x)
+        return True
+    except ValueError:
+        return False
+
+
+def list_enabled_bits(x: int) -> Sequence[int]:
+    """e.g. 77 (0b1001101) --> (0, 2, 3, 6)"""
+    binary = bin(x)[2:]
+    rev_bin = reversed(binary)
+    return tuple(i for i, b in enumerate(rev_bin) if b == '1')
+
+
+def resolve_dns_srv(host: str):
+    srv_records = dns.resolver.query(host, 'SRV')
+    # priority: prefer lower
+    # weight: tie breaker; prefer higher
+    srv_records = sorted(srv_records, key=lambda x: (x.priority, -x.weight))
+
+    def dict_from_srv_record(srv):
+        return {
+            'host': str(srv.target),
+            'port': srv.port,
+        }
+    return [dict_from_srv_record(srv) for srv in srv_records]
+
+
+def randrange(bound: int) -> int:
+    """Return a random integer k such that 1 <= k < bound, uniformly
+    distributed across that range."""
+    return ecdsa.util.randrange(bound)
+
+
+class CallbackManager:
+        # callbacks set by the GUI
+    def __init__(self):
+        self.callback_lock = threading.Lock()
+        self.callbacks = defaultdict(list)      # note: needs self.callback_lock
+        self.asyncio_loop = None
+
+    def register_callback(self, callback, events):
+        with self.callback_lock:
+            for event in events:
+                self.callbacks[event].append(callback)
+
+    def unregister_callback(self, callback):
+        with self.callback_lock:
+            for callbacks in self.callbacks.values():
+                if callback in callbacks:
+                    callbacks.remove(callback)
+
+    def trigger_callback(self, event, *args):
+        if self.asyncio_loop is None:
+            self.asyncio_loop = asyncio.get_event_loop()
+            assert self.asyncio_loop.is_running(), "event loop not running"
+        with self.callback_lock:
+            callbacks = self.callbacks[event][:]
+        for callback in callbacks:
+            # FIXME: if callback throws, we will lose the traceback
+            if asyncio.iscoroutinefunction(callback):
+                asyncio.run_coroutine_threadsafe(callback(event, *args), self.asyncio_loop)
+            else:
+                self.asyncio_loop.call_soon_threadsafe(callback, event, *args)
+
+
+callback_mgr = CallbackManager()
+trigger_callback = callback_mgr.trigger_callback
+register_callback = callback_mgr.register_callback
+unregister_callback = callback_mgr.unregister_callback
+
+
+_NetAddrType = TypeVar("_NetAddrType")
+
+
+class NetworkRetryManager(Generic[_NetAddrType]):
+    """Truncated Exponential Backoff for network connections."""
+
+    def __init__(
+            self, *,
+            max_retry_delay_normal: float,
+            init_retry_delay_normal: float,
+            max_retry_delay_urgent: float = None,
+            init_retry_delay_urgent: float = None,
+    ):
+        self._last_tried_addr = {}  # type: Dict[_NetAddrType, Tuple[float, int]]  # (unix ts, num_attempts)
+
+        # note: these all use "seconds" as unit
+        if max_retry_delay_urgent is None:
+            max_retry_delay_urgent = max_retry_delay_normal
+        if init_retry_delay_urgent is None:
+            init_retry_delay_urgent = init_retry_delay_normal
+        self._max_retry_delay_normal = max_retry_delay_normal
+        self._init_retry_delay_normal = init_retry_delay_normal
+        self._max_retry_delay_urgent = max_retry_delay_urgent
+        self._init_retry_delay_urgent = init_retry_delay_urgent
+
+    def _trying_addr_now(self, addr: _NetAddrType) -> None:
+        last_time, num_attempts = self._last_tried_addr.get(addr, (0, 0))
+        # we add up to 1 second of noise to the time, so that clients are less likely
+        # to get synchronised and bombard the remote in connection waves:
+        cur_time = time.time() + random.random()
+        self._last_tried_addr[addr] = cur_time, num_attempts + 1
+
+    def _on_connection_successfully_established(self, addr: _NetAddrType) -> None:
+        self._last_tried_addr[addr] = time.time(), 0
+
+    def _can_retry_addr(self, peer: _NetAddrType, *,
+                        now: float = None, urgent: bool = False) -> bool:
+        if now is None:
+            now = time.time()
+        last_time, num_attempts = self._last_tried_addr.get(peer, (0, 0))
+        if urgent:
+            delay = min(self._max_retry_delay_urgent,
+                        self._init_retry_delay_urgent * 2 ** num_attempts)
+        else:
+            delay = min(self._max_retry_delay_normal,
+                        self._init_retry_delay_normal * 2 ** num_attempts)
+        next_time = last_time + delay
+        return next_time < now
+
+    def _clear_addr_retry_times(self) -> None:
+        self._last_tried_addr.clear()
+
+
+class MySocksProxy(aiorpcx.SOCKSProxy):
+
+    async def open_connection(self, host=None, port=None, **kwargs):
+        loop = asyncio.get_event_loop()
+        reader = asyncio.StreamReader(loop=loop)
+        protocol = asyncio.StreamReaderProtocol(reader, loop=loop)
+        transport, _ = await self.create_connection(
+            lambda: protocol, host, port, **kwargs)
+        writer = asyncio.StreamWriter(transport, protocol, reader, loop)
+        return reader, writer
+
+    @classmethod
+    def from_proxy_dict(cls, proxy: dict = None) -> Optional['MySocksProxy']:
+        if not proxy:
+            return None
+        username, pw = proxy.get('user'), proxy.get('password')
+        if not username or not pw:
+            auth = None
+        else:
+            auth = aiorpcx.socks.SOCKSUserAuth(username, pw)
+        addr = aiorpcx.NetAddress(proxy['host'], proxy['port'])
+        if proxy['mode'] == "socks4":
+            ret = cls(addr, aiorpcx.socks.SOCKS4a, auth)
+        elif proxy['mode'] == "socks5":
+            ret = cls(addr, aiorpcx.socks.SOCKS5, auth)
+        else:
+            raise NotImplementedError  # http proxy not available with aiorpcx
+        return ret

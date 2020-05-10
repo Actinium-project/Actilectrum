@@ -10,6 +10,10 @@ recursive-include packages cacert.pem
 
 graft actilectrum
 prune actilectrum/tests
+graft contrib/udev
+
+exclude actilectrum/*.so
+exclude actilectrum/*.so.0
 
 global-exclude __pycache__
 global-exclude *.py[co~]

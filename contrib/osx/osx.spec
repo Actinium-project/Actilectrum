@@ -59,30 +59,22 @@ block_cipher = None
 
 # see https://github.com/pyinstaller/pyinstaller/issues/2005
 hiddenimports = []
+hiddenimports += collect_submodules('pkg_resources')  # workaround for https://github.com/pypa/setuptools/issues/1963
 hiddenimports += collect_submodules('trezorlib')
-hiddenimports += collect_submodules('safetlib')
-hiddenimports += collect_submodules('btchip')
-hiddenimports += collect_submodules('keepkeylib')
 hiddenimports += collect_submodules('websocket')
-hiddenimports += collect_submodules('ckcc')
 hiddenimports += ['_scrypt', 'PyQt5.QtPrintSupport']  # needed by Revealer
-
-# safetlib imports PyQt5.Qt.  We use a local updated copy of pinmatrix.py until they
-# release a new version that includes https://github.com/archos-safe-t/python-safet/commit/b1eab3dba4c04fdfc1fcf17b66662c28c5f2380e
-hiddenimports.remove('safetlib.qt.pinmatrix')
 
 datas = [
     (electrum + PYPKG + '/*.json', PYPKG),
+    (electrum + PYPKG + '/lnwire/*.csv', PYPKG + '/lnwire'),
     (electrum + PYPKG + '/wordlist/english.txt', PYPKG + '/wordlist'),
     (electrum + PYPKG + '/locale', PYPKG + '/locale'),
     (electrum + PYPKG + '/plugins', PYPKG + '/plugins'),
     (electrum + PYPKG + '/gui/icons', PYPKG + '/gui/icons'),
 ]
 datas += collect_data_files('trezorlib')
-datas += collect_data_files('safetlib')
-datas += collect_data_files('btchip')
-datas += collect_data_files('keepkeylib')
-datas += collect_data_files('ckcc')
+datas += collect_data_files('jsonrpcserver')
+datas += collect_data_files('jsonrpcclient')
 
 # Add the QR Scanner helper app
 datas += [(electrum + "contrib/osx/CalinsQRReader/build/Release/CalinsQRReader.app", "./contrib/osx/CalinsQRReader/build/Release/CalinsQRReader.app")]
@@ -108,11 +100,6 @@ a = Analysis([electrum+ MAIN_SCRIPT,
               electrum+'actilectrum/plugins/cosigner_pool/qt.py',
               electrum+'actilectrum/plugins/email_requests/qt.py',
               electrum+'actilectrum/plugins/trezor/qt.py',
-              electrum+'actilectrum/plugins/safe_t/client.py',
-              electrum+'actilectrum/plugins/safe_t/qt.py',
-              electrum+'actilectrum/plugins/keepkey/qt.py',
-              electrum+'actilectrum/plugins/ledger/qt.py',
-              electrum+'actilectrum/plugins/coldcard/qt.py',
               ],
              binaries=binaries,
              datas=datas,

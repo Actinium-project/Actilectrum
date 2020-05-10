@@ -6,23 +6,31 @@ import locale
 from decimal import Decimal
 import getpass
 import logging
+from typing import TYPE_CHECKING
 
 import actilectrum as electrum
+from actilectrum import util
 from actilectrum.util import format_satoshis
-from actilectrum.bitcoin import is_address, COIN, TYPE_ADDRESS
-from actilectrum.transaction import TxOutput
+from actilectrum.bitcoin import is_address, COIN
+from actilectrum.transaction import PartialTxOutput
 from actilectrum.wallet import Wallet
 from actilectrum.storage import WalletStorage
 from actilectrum.network import NetworkParameters, TxBroadcastError, BestEffortRequestFailed
-from actilectrum.interface import deserialize_server
+from actilectrum.interface import ServerAddr
 from actilectrum.logging import console_stderr_handler
+
+if TYPE_CHECKING:
+    from actilectrum.daemon import Daemon
+    from actilectrum.simple_config import SimpleConfig
+    from actilectrum.plugin import Plugins
+
 
 _ = lambda x:x  # i18n
 
 
 class ElectrumGui:
 
-    def __init__(self, config, daemon, plugins):
+    def __init__(self, config: 'SimpleConfig', daemon: 'Daemon', plugins: 'Plugins'):
 
         self.config = config
         self.network = daemon.network
@@ -33,7 +41,7 @@ class ElectrumGui:
         if storage.is_encrypted():
             password = getpass.getpass('Password:', stream=None)
             storage.decrypt(password)
-        self.wallet = Wallet(storage)
+        self.wallet = Wallet(storage, config=config)
         self.wallet.start_network(self.network)
         self.contacts = self.wallet.contacts
 
@@ -65,8 +73,7 @@ class ElectrumGui:
         self.str_fee = ""
         self.history = None
 
-        if self.network:
-            self.network.register_callback(self.update, ['wallet_updated', 'network_updated'])
+        util.register_callback(self.update, ['wallet_updated', 'network_updated'])
 
         self.tab_names = [_("History"), _("Send"), _("Receive"), _("Addresses"), _("Contacts"), _("Banner")]
         self.num_tabs = len(self.tab_names)
@@ -117,9 +124,9 @@ class ElectrumGui:
 
         b = 0
         self.history = []
-        for tx_hash, tx_mined_status, value, balance in self.wallet.get_history():
-            if tx_mined_status.conf:
-                timestamp = tx_mined_status.timestamp
+        for hist_item in self.wallet.get_history():
+            if hist_item.tx_mined_status.conf:
+                timestamp = hist_item.tx_mined_status.timestamp
                 try:
                     time_str = datetime.datetime.fromtimestamp(timestamp).isoformat(' ')[:-3]
                 except Exception:
@@ -127,10 +134,11 @@ class ElectrumGui:
             else:
                 time_str = 'unconfirmed'
 
-            label = self.wallet.get_label(tx_hash)
+            label = self.wallet.get_label(hist_item.txid)
             if len(label) > 40:
                 label = label[0:37] + '...'
-            self.history.append( format_str%( time_str, label, format_satoshis(value, whitespaces=True), format_satoshis(balance, whitespaces=True) ) )
+            self.history.append(format_str % (time_str, label, format_satoshis(hist_item.delta, whitespaces=True),
+                                              format_satoshis(hist_item.balance, whitespaces=True)))
 
 
     def print_balance(self):
@@ -330,6 +338,8 @@ class ElectrumGui:
             curses.echo()
             curses.endwin()
 
+    def stop(self):
+        pass
 
     def do_clear(self):
         self.str_amount = ''
@@ -359,10 +369,11 @@ class ElectrumGui:
         else:
             password = None
         try:
-            tx = self.wallet.mktx([TxOutput(TYPE_ADDRESS, self.str_recipient, amount)],
-                                  password, self.config, fee)
+            tx = self.wallet.mktx(outputs=[PartialTxOutput.from_address_and_value(self.str_recipient, amount)],
+                                  password=password,
+                                  fee=fee)
         except Exception as e:
-            self.show_message(str(e))
+            self.show_message(repr(e))
             return
 
         if self.str_description:
@@ -398,26 +409,28 @@ class ElectrumGui:
         if not self.network:
             return
         net_params = self.network.get_parameters()
-        host, port, protocol = net_params.host, net_params.port, net_params.protocol
+        server_addr = net_params.server
         proxy_config, auto_connect = net_params.proxy, net_params.auto_connect
-        srv = 'auto-connect' if auto_connect else self.network.default_server
+        srv = 'auto-connect' if auto_connect else str(self.network.default_server)
         out = self.run_dialog('Network', [
             {'label':'server', 'type':'str', 'value':srv},
             {'label':'proxy', 'type':'str', 'value':self.config.get('proxy', '')},
             ], buttons = 1)
         if out:
             if out.get('server'):
-                server = out.get('server')
-                auto_connect = server == 'auto-connect'
+                server_str = out.get('server')
+                auto_connect = server_str == 'auto-connect'
                 if not auto_connect:
                     try:
-                        host, port, protocol = deserialize_server(server)
+                        server_addr = ServerAddr.from_str(server_str)
                     except Exception:
-                        self.show_message("Error:" + server + "\nIn doubt, type \"auto-connect\"")
+                        self.show_message("Error:" + server_str + "\nIn doubt, type \"auto-connect\"")
                         return False
             if out.get('server') or out.get('proxy'):
-                proxy = actilectrum.network.deserialize_proxy(out.get('proxy')) if out.get('proxy') else proxy_config
-                net_params = NetworkParameters(host, port, protocol, proxy, auto_connect)
+                proxy = electrum.network.deserialize_proxy(out.get('proxy')) if out.get('proxy') else proxy_config
+                net_params = NetworkParameters(server=server_addr,
+                                               proxy=proxy,
+                                               auto_connect=auto_connect)
                 self.network.run_from_another_thread(self.network.set_parameters(net_params))
 
     def settings_dialog(self):

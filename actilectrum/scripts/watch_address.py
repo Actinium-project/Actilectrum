@@ -6,6 +6,7 @@ import asyncio
 from actilectrum.network import Network
 from actilectrum.util import print_msg, create_and_start_event_loop
 from actilectrum.synchronizer import SynchronizerBase
+from actilectrum.simple_config import SimpleConfig
 
 
 try:
@@ -14,9 +15,11 @@ except Exception:
     print("usage: watch_address <actinium_address>")
     sys.exit(1)
 
+config = SimpleConfig()
+
 # start network
 loop = create_and_start_event_loop()[0]
-network = Network()
+network = Network(config)
 network.start()
 
 

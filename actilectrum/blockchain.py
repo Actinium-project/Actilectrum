@@ -22,6 +22,7 @@
 # SOFTWARE.
 import os
 import threading
+import time
 from typing import Optional, Dict, Mapping, Sequence
 
 from . import util
@@ -31,14 +32,6 @@ from . import constants
 from .util import bfh, bh2u
 from .simple_config import SimpleConfig
 from .logging import get_logger, Logger
-
-try:
-    import scrypt
-    getPoWHash = lambda x: scrypt.hash(x, x, N=1024, r=1, p=1, buflen=32)
-except ImportError:
-    util.print_msg("Warning: package scrypt not available; synchronization could be very slow")
-    from .scrypt import scrypt_1024_1_1_80 as getPoWHash
-
 
 _logger = get_logger(__name__)
 
@@ -170,6 +163,20 @@ _CHAINWORK_CACHE = {
 }  # type: Dict[str, int]
 
 
+def init_headers_file_for_best_chain():
+    b = get_best_chain()
+    filename = b.path()
+    length = HEADER_SIZE * len(constants.net.CHECKPOINTS) * 2016
+    if not os.path.exists(filename) or os.path.getsize(filename) < length:
+        with open(filename, 'wb') as f:
+            if length > 0:
+                f.seek(length - 1)
+                f.write(b'\x00')
+        util.ensure_sparse_file(filename)
+    with b.lock:
+        b.update_size()
+
+
 class Blockchain(Logger):
     """
     Manages blockchain headers and their verification
@@ -269,6 +276,7 @@ class Blockchain(Logger):
                           parent=parent,
                           forkpoint_hash=hash_header(header),
                           prev_hash=parent.get_hash(forkpoint-1))
+        self.assert_headers_file_available(parent.path())
         open(self.path(), 'w+').close()
         self.save_header(header)
         # put into global dict. note that in some cases
@@ -482,6 +490,20 @@ class Blockchain(Logger):
         """Return latest header."""
         height = self.height()
         return self.read_header(height)
+
+    def is_tip_stale(self) -> bool:
+        STALE_DELAY = 8 * 60 * 60  # in seconds
+        header = self.header_at_tip()
+        if not header:
+            return True
+        # note: We check the timestamp only in the latest header.
+        #       The Bitcoin consensus has a lot of leeway here:
+        #       - needs to be greater than the median of the timestamps of the past 11 blocks, and
+        #       - up to at most 2 hours into the future compared to local clock
+        #       so there is ~2 hours of leeway in either direction
+        if header['timestamp'] + STALE_DELAY < time.time():
+            return True
+        return False
 
     def get_hash(self, height: int) -> str:
         def is_height_checkpoint():

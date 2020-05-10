@@ -27,6 +27,7 @@
 
 import sys
 import os
+from typing import TYPE_CHECKING
 
 try:
     sys.argv = ['']
@@ -40,13 +41,18 @@ except ImportError:
 kivy.require('1.8.0')
 from kivy.logger import Logger
 
+if TYPE_CHECKING:
+    from actilectrum.simple_config import SimpleConfig
+    from actilectrum.daemon import Daemon
+    from actilectrum.plugin import Plugins
+
 
 
 
 class ElectrumGui:
 
-    def __init__(self, config, daemon, plugins):
-        Logger.debug('ElectrumGUI: initialising')
+    def __init__(self, config: 'SimpleConfig', daemon: 'Daemon', plugins: 'Plugins'):
+        Logger.debug('ActilectrumGUI: initialising')
         self.daemon = daemon
         self.network = daemon.network
         self.config = config
@@ -54,9 +60,11 @@ class ElectrumGui:
 
     def main(self):
         from .main_window import ElectrumWindow
-        self.config.open_last_wallet()
         w = ElectrumWindow(config=self.config,
                            network=self.network,
                            plugins = self.plugins,
                            gui_object=self)
         w.run()
+
+    def stop(self):
+        pass

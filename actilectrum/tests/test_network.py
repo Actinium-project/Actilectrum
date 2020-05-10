@@ -5,16 +5,18 @@ import unittest
 from actilectrum import constants
 from actilectrum.simple_config import SimpleConfig
 from actilectrum import blockchain
-from actilectrum.interface import Interface
+from actilectrum.interface import Interface, ServerAddr
 from actilectrum.crypto import sha256
 from actilectrum.util import bh2u
+
+from . import ElectrumTestCase
 
 
 class MockTaskGroup:
     async def spawn(self, x): return
 
 class MockNetwork:
-    main_taskgroup = MockTaskGroup()
+    taskgroup = MockTaskGroup()
     asyncio_loop = asyncio.get_event_loop()
 
 class MockInterface(Interface):
@@ -22,7 +24,7 @@ class MockInterface(Interface):
         self.config = config
         network = MockNetwork()
         network.config = config
-        super().__init__(network, 'mock-server:50000:t', None)
+        super().__init__(network=network, server=ServerAddr.from_str('mock-server:50000:t'), proxy=None)
         self.q = asyncio.Queue()
         self.blockchain = blockchain.Blockchain(config=self.config, forkpoint=0,
                                                 parent=None, forkpoint_hash=constants.net.GENESIS, prev_hash=None)
@@ -36,7 +38,7 @@ class MockInterface(Interface):
         assert assert_mode in item['mock'], (assert_mode, item)
         return item
 
-class TestNetwork(unittest.TestCase):
+class TestNetwork(ElectrumTestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -49,7 +51,8 @@ class TestNetwork(unittest.TestCase):
         constants.set_mainnet()
 
     def setUp(self):
-        self.config = SimpleConfig({'actilectrum_path': tempfile.mkdtemp(prefix="test_network")})
+        super().setUp()
+        self.config = SimpleConfig({'actilectrum_pathathathatactilectrum_pathm_pathm_pathm_pathm_path})
         self.interface = MockInterface(self.config)
 
     def test_fork_noconflict(self):

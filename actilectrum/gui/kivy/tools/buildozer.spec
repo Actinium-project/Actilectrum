@@ -13,13 +13,17 @@ package.domain = org.actilectrum
 source.dir = .
 
 # (list) Source files to include (let empty to include all the files)
-source.include_exts = py,png,jpg,kv,atlas,ttf,txt,gif,pem,mo,vs,fs,json
+source.include_exts = py,png,jpg,kv,atlas,ttf,txt,gif,pem,mo,vs,fs,json,csv
 
 # (list) Source files to exclude (let empty to not exclude anything)
 source.exclude_exts = spec
 
 # (list) List of directory to exclude (let empty to not exclude anything)
-source.exclude_dirs = bin, build, dist, contrib, actilectrum/gui/qt, actilectrum/gui/kivy/tools, actilectrum/gui/kivy/theming/light
+source.exclude_dirs = bin, build, dist, contrib,
+    actilectrum/tests,
+    actilectrum/gui/qt,
+    actilectrum/gui/kivy/tools,
+    actilectrum/gui/kivy/theming/light
 # (list) List of exclusions using pattern matching
 source.exclude_patterns = Makefile,setup*
 
@@ -36,9 +40,11 @@ requirements =
     android,
     openssl,
     plyer,
-    kivy==82d561d62577757d478df52173610f925c05ecab,
+    # kivy 1.11.1
+    kivy==39c17457bae91baf8fe710dc989791e45879f136,
     libffi,
-    libsecp256k1
+    libsecp256k1,
+    cryptography
 
 # (str) Presplash of the application
 #presplash.filename = %(source.dir)s/gui/kivy/theming/splash.png
@@ -59,7 +65,7 @@ fullscreen = False
 #
 
 # (list) Permissions
-android.permissions = INTERNET, CAMERA
+android.permissions = INTERNET, CAMERA, WRITE_EXTERNAL_STORAGE
 
 # (int) Android API to use
 android.api = 28
@@ -68,7 +74,7 @@ android.api = 28
 android.minapi = 21
 
 # (str) Android NDK version to use
-android.ndk = 17c
+android.ndk = 19c
 
 # (int) Android NDK API to use (optional). This is the minimum API your app will support.
 android.ndk_api = 21
@@ -81,6 +87,9 @@ android.ndk_path = /opt/android/android-ndk
 
 # (str) Android SDK directory (if empty, it will be automatically downloaded.)
 android.sdk_path = /opt/android/android-sdk
+
+# (str) ANT directory (if empty, it will be automatically downloaded.)
+android.ant_path = /opt/android/apache-ant
 
 # (str) Android entry point, default is ok for Kivy-based app
 #android.entrypoint = org.renpy.android.PythonActivity
@@ -124,6 +133,10 @@ android.manifest.launch_mode = singleTask
 # Don't forget to add the WAKE_LOCK permission if you set this to True
 #android.wakelock = False
 
+# (str) The Android arch to build for, choices: armeabi-v7a, arm64-v8a, x86, x86_64
+# note: can be overwritten by APP_ANDROID_ARCH env var
+android.arch = armeabi-v7a
+
 # (list) Android application meta-data to set (key=value format)
 #android.meta_data =
 
@@ -133,8 +146,26 @@ android.manifest.launch_mode = singleTask
 
 android.whitelist = lib-dynload/_csv.so
 
-# local version that merges branch 866
+
+#
+# Python for android (p4a) specific
+#
+
+# (str) python-for-android git clone directory (if empty, it will be automatically cloned from github)
 p4a.source_dir = /opt/python-for-android
+
+# (str) The directory in which python-for-android should look for your own build recipes (if any)
+#p4a.local_recipes =
+
+# (str) Filename to the hook for p4a
+#p4a.hook =
+
+# (str) Bootstrap to use for android builds
+# p4a.bootstrap = sdl2
+
+# (int) port number to specify an explicit --port= p4a argument (eg for bootstrap flask)
+#p4a.port =
+
 
 #
 # iOS specific

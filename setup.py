@@ -52,10 +52,14 @@ if platform.system() in ['Linux', 'FreeBSD', 'DragonFly']:
 
 extras_require = {
     'hardware': requirements_hw,
-    'fast': ['pycryptodomex'],
     'gui': ['pyqt5'],
+    'crypto': ['pycryptodomex>=3.7'],
+    'tests': ['pycryptodomex>=3.7', 'cryptography>=2.1'],
 }
-extras_require['full'] = [pkg for sublist in list(extras_require.values()) for pkg in sublist]
+# 'full' extra that tries to grab everything an enduser would need (except for libsecp256k1...)
+extras_require['full'] = [pkg for sublist in ['hardware', 'gui', 'crypto'] for pkg in sublist]
+# legacy. keep 'fast' extra working
+extras_require['fast'] = extras_require['crypto']
 
 
 setup(
@@ -74,10 +78,11 @@ setup(
         'actilectrum': 'actilectrum'
     },
     package_data={
-        '': ['*.txt', '*.json', '*.ttf', '*.otf'],
+        '': ['*.txt', '*.json', '*.ttf', '*.otf', '*.csv'],
         'actilectrum': [
             'wordlist/*.txt',
-            'locale/*/LC_MESSAGES/actilectrum.mo',
+            'locale/*/LC_MESSAGES/electrum.mo',
+            'lnwire/*.csv',
         ],
         'actilectrum.gui': [
             'icons/*',

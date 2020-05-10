@@ -18,7 +18,7 @@ RUN apt -y update -qq \
 
 
 ENV ANDROID_NDK_HOME="${ANDROID_HOME}/android-ndk"
-ENV ANDROID_NDK_VERSION="17c"
+ENV ANDROID_NDK_VERSION="19c"
 ENV ANDROID_NDK_HOME_V="${ANDROID_NDK_HOME}-r${ANDROID_NDK_VERSION}"
 
 # get the latest version from https://developer.android.com/ndk/downloads/index.html
@@ -60,7 +60,7 @@ RUN mkdir --parents "${ANDROID_SDK_HOME}/.android/" \
 RUN apt -y update -qq \
     && apt -y install -qq --no-install-recommends openjdk-8-jdk \
     && apt -y autoremove
-RUN yes | "${ANDROID_SDK_HOME}/tools/bin/sdkmanager" "build-tools;${ANDROID_SDK_BUILD_TOOLS_VERSION}" > /dev/null
+RUN yes | "${ANDROID_SDK_HOME}/tools/bin/sdkmanager" --licenses > /dev/null
 
 # download platforms, API, build tools
 RUN "${ANDROID_SDK_HOME}/tools/bin/sdkmanager" "platforms;android-24" > /dev/null && \
@@ -68,6 +68,20 @@ RUN "${ANDROID_SDK_HOME}/tools/bin/sdkmanager" "platforms;android-24" > /dev/nul
     "${ANDROID_SDK_HOME}/tools/bin/sdkmanager" "build-tools;${ANDROID_SDK_BUILD_TOOLS_VERSION}" > /dev/null && \
     "${ANDROID_SDK_HOME}/tools/bin/sdkmanager" "extras;android;m2repository" > /dev/null && \
     chmod +x "${ANDROID_SDK_HOME}/tools/bin/avdmanager"
+
+# download ANT
+ENV APACHE_ANT_VERSION="1.9.4"
+ENV APACHE_ANT_ARCHIVE="apache-ant-${APACHE_ANT_VERSION}-bin.tar.gz"
+ENV APACHE_ANT_DL_URL="http://archive.apache.org/dist/ant/binaries/${APACHE_ANT_ARCHIVE}"
+ENV APACHE_ANT_HOME="${ANDROID_HOME}/apache-ant"
+ENV APACHE_ANT_HOME_V="${APACHE_ANT_HOME}-${APACHE_ANT_VERSION}"
+
+RUN curl --location --progress-bar \
+        "${APACHE_ANT_DL_URL}" \
+        --output "${APACHE_ANT_ARCHIVE}" \
+    && tar -xf "${APACHE_ANT_ARCHIVE}" -C "${ANDROID_HOME}" \
+    && ln -sfn "${APACHE_ANT_HOME_V}" "${APACHE_ANT_HOME}" \
+    && rm -rf "${APACHE_ANT_ARCHIVE}"
 
 
 ENV USER="user"
@@ -78,8 +92,8 @@ ENV WORK_DIR="${HOME_DIR}/wspace" \
 # install system dependencies
 RUN apt -y update -qq \
     && apt -y install -qq --no-install-recommends \
-        python3 virtualenv python3-pip python3-setuptools git wget lbzip2 patch sudo \
-        software-properties-common \
+        python3 python3-pip python3-setuptools git wget lbzip2 patch sudo \
+        software-properties-common libssl-dev \
     && apt -y autoremove
 
 # install kivy
@@ -138,7 +152,9 @@ RUN git config --global user.name "John Doe" \
 RUN cd /opt \
     && git clone https://github.com/kivy/buildozer \
     && cd buildozer \
-    && git checkout 678b1bf52cf63daa51b06e86a43ea4e2ea8a0b24 \
+    && git remote add sombernight https://github.com/SomberNight/buildozer \
+    && git fetch --all \
+    && git checkout d0323c165dd5d9aa23d5eb01044474fe006c3420 \
     && python3 -m pip install --user -e .
 
 # install python-for-android
@@ -147,11 +163,7 @@ RUN cd /opt \
     && cd python-for-android \
     && git remote add sombernight https://github.com/SomberNight/python-for-android \
     && git fetch --all \
-    && git checkout ccb0f8e1bab36f1b7d1508216b4b4afb076e614f \
-       # allowBackup="false":
-    && git cherry-pick d7f722e4e5d4b3e6f5b1733c95e6a433f78ee570 \
-       # fix gradle "versionCode" overflow:
-    && git cherry-pick ed20e196fbcdce718a180f88f23bb2d165c4c5d8 \
+    && git checkout cef08b92268fe69ef331699c2205cbb091e730f0 \
     && python3 -m pip install --user -e .
 
 # build env vars

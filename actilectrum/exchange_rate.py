@@ -12,6 +12,7 @@ from typing import Sequence, Optional
 
 from aiorpcx.curio import timeout_after, TaskTimeout, TaskGroup
 
+from . import util
 from .bitcoin import COIN
 from .i18n import _
 from .util import (ThreadJob, make_dir, log_exceptions,
@@ -78,6 +79,9 @@ class ExchangeBase(Logger):
             self.logger.info(f"getting fx quotes for {ccy}")
             self.quotes = await self.get_rates(ccy)
             self.logger.info("received fx quotes")
+        except asyncio.CancelledError:
+            # CancelledError must be passed-through for cancellation to work
+            raise
         except BaseException as e:
             self.logger.info(f"failed fx quotes: {repr(e)}")
             self.quotes = {}
@@ -145,7 +149,7 @@ class ExchangeBase(Logger):
 class Bit2C(ExchangeBase):
 
     async def get_rates(self, ccy):
-        json = await self.get_json('www.bit2c.co.il', '/Exchanges/LTCNIS/Ticker.json')
+        json = await self.get_json('www.bit2c.co.il', '/Exchanges/ACMNIS/Ticker.json')
         return {'NIS': Decimal(json['ll'])}
 
 
@@ -173,7 +177,7 @@ class BitcoinVenezuela(ExchangeBase):
     async def request_history(self, ccy):
         json = await self.get_json('api.bitcoinvenezuela.com',
                              "/historical/index.php?coin=ACM")
-        return json[ccy +'_LTC']
+        return json[ccy +'_ACM']
 
 
 class Bitfinex(ExchangeBase):
@@ -277,12 +281,12 @@ class Kraken(ExchangeBase):
 
     async def get_rates(self, ccy):
         dicts = await self.get_json('api.kraken.com', '/0/public/AssetPairs')
-        pairs = [k for k in dicts['result'] if k.startswith('XLTCZ')]
+        pairs = [k for k in dicts['result'] if k.startswith('XACMZ')]
         json = await self.get_json('api.kraken.com',
                              '/0/public/Ticker?pair=%s' % ','.join(pairs))
         ccys = [p[5:] for p in pairs]
         result = dict.fromkeys(ccys)
-        result[ccy] = Decimal(json['result']['XLTCZ'+ccy]['c'][0])
+        result[ccy] = Decimal(json['result']['XACMZ'+ccy]['c'][0])
         return result
 
     def history_ccys(self):
@@ -291,7 +295,7 @@ class Kraken(ExchangeBase):
     async def request_history(self, ccy):
         query = '/0/public/OHLC?pair=ACM%s&interval=1440' % ccy
         json = await self.get_json('api.kraken.com', query)
-        history = json['result']['XLTCZ'+ccy]
+        history = json['result']['XACMZ'+ccy]
         return dict([(time.strftime('%Y-%m-%d', time.localtime(t[0])), t[4])
                                     for t in history])
 
@@ -314,7 +318,7 @@ class TheRockTrading(ExchangeBase):
 
     async def get_rates(self, ccy):
         json = await self.get_json('api.therocktrading.com',
-                                   '/v1/funds/LTCEUR/ticker')
+                                   '/v1/funds/ACMEUR/ticker')
         return {'EUR': Decimal(json['last'])}
 
 
@@ -389,12 +393,11 @@ def get_exchanges_by_ccy(history=True):
 
 class FxThread(ThreadJob):
 
-    def __init__(self, config: SimpleConfig, network: Network):
+    def __init__(self, config: SimpleConfig, network: Optional[Network]):
         ThreadJob.__init__(self)
         self.config = config
         self.network = network
-        if self.network:
-            self.network.register_callback(self.set_proxy, ['proxy_set'])
+        util.register_callback(self.set_proxy, ['proxy_set'])
         self.ccy = self.get_currency()
         self.history_used_spot = False
         self.ccy_combo = None
@@ -496,19 +499,18 @@ class FxThread(ThreadJob):
         self.logger.info(f"using exchange {name}")
         if self.config_exchange() != name:
             self.config.set_key('use_exchange', name, True)
-        self.exchange = class_(self.on_quotes, self.on_history)
+        assert issubclass(class_, ExchangeBase), f"unexpected type {class_} for {name}"
+        self.exchange = class_(self.on_quotes, self.on_history)  # type: ExchangeBase
         # A new exchange means new fx quotes, initially empty.  Force
         # a quote refresh
         self.trigger_update()
         self.exchange.read_historical_rates(self.ccy, self.cache_dir)
 
     def on_quotes(self):
-        if self.network:
-            self.network.trigger_callback('on_quotes')
+        util.trigger_callback('on_quotes')
 
     def on_history(self):
-        if self.network:
-            self.network.trigger_callback('on_history')
+        util.trigger_callback('on_history')
 
     def exchange_rate(self) -> Decimal:
         """Returns the exchange rate as a Decimal"""
@@ -547,9 +549,11 @@ class FxThread(ThreadJob):
         rate = self.exchange.historical_rate(self.ccy, d_t)
         # Frequently there is no rate for today, until tomorrow :)
         # Use spot quotes in that case
-        if rate == 'NaN' and (datetime.today().date() - d_t.date()).days <= 2:
+        if rate in ('NaN', None) and (datetime.today().date() - d_t.date()).days <= 2:
             rate = self.exchange.quotes.get(self.ccy, 'NaN')
             self.history_used_spot = True
+        if rate is None:
+            rate = 'NaN'
         return Decimal(rate)
 
     def historical_value_str(self, satoshis, d_t):

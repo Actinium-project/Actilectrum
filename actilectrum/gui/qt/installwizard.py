@@ -3,29 +3,37 @@
 # file LICENCE or http://www.opensource.org/licenses/mit-license.php
 
 import os
+import json
 import sys
 import threading
 import traceback
-from typing import Tuple, List, Callable, NamedTuple, Optional
+from typing import Tuple, List, Callable, NamedTuple, Optional, TYPE_CHECKING
+from functools import partial
 
 from PyQt5.QtCore import QRect, QEventLoop, Qt, pyqtSignal
 from PyQt5.QtGui import QPalette, QPen, QPainter, QPixmap
 from PyQt5.QtWidgets import (QWidget, QDialog, QLabel, QHBoxLayout, QMessageBox,
                              QVBoxLayout, QLineEdit, QFileDialog, QPushButton,
-                             QGridLayout, QSlider, QScrollArea)
+                             QGridLayout, QSlider, QScrollArea, QApplication)
 
 from actilectrum.wallet import Wallet, Abstract_Wallet
-from actilectrum.storage import WalletStorage
-from actilectrum.util import UserCancelled, InvalidPassword, WalletFileException
-from actilectrum.base_wizard import BaseWizard, HWD_SETUP_DECRYPT_WALLET, GoBack
+from actilectrum.storage import WalletStorage, StorageReadWriteError
+from actilectrum.util import UserCancelled, InvalidPassword, WalletFileException, get_new_wallet_name
+from actilectrum.base_wizard import BaseWizard, HWD_SETUP_DECRYPT_WALLET, GoBack, ReRunDialog
 from actilectrum.i18n import _
 
 from .seed_dialog import SeedLayout, KeysLayout
 from .network_dialog import NetworkChoiceLayout
 from .util import (MessageBoxMixin, Buttons, icon_path, ChoicesLayout, WWLabel,
-                   InfoButton)
+                   InfoButton, char_width_in_lineedit, PasswordLineEdit)
 from .password_dialog import PasswordLayout, PasswordLayoutForHW, PW_NEW
-from actilectrum.plugin import run_hook
+from actilectrum.plugin import run_hook, Plugins
+
+if TYPE_CHECKING:
+    from actilectrum.simple_config import SimpleConfig
+    from actilectrum.wallet_db import WalletDB
+    from . import ElectrumGui
+
 
 MSG_ENTER_PASSWORD = _("Choose a password to encrypt your wallet keys.") + '\n'\
                      + _("Leave this field empty if you want to disable encryption.")
@@ -88,19 +96,41 @@ def wizard_dialog(func):
     def func_wrapper(*args, **kwargs):
         run_next = kwargs['run_next']
         wizard = args[0]  # type: InstallWizard
-        wizard.back_button.setText(_('Back') if wizard.can_go_back() else _('Cancel'))
-        try:
-            out = func(*args, **kwargs)
-            if type(out) is not tuple:
-                out = (out,)
-            run_next(*out)
-        except GoBack:
-            if wizard.can_go_back():
-                wizard.go_back()
-                return
-            else:
-                wizard.close()
+        while True:
+            #wizard.logger.debug(f"dialog stack. len: {len(wizard._stack)}. stack: {wizard._stack}")
+            wizard.back_button.setText(_('Back') if wizard.can_go_back() else _('Cancel'))
+            # current dialog
+            try:
+                out = func(*args, **kwargs)
+                if type(out) is not tuple:
+                    out = (out,)
+            except GoBack:
+                if not wizard.can_go_back():
+                    wizard.close()
+                # to go back from the current dialog, we just let the caller unroll the stack:
                 raise
+            # next dialog
+            try:
+                while True:
+                    try:
+                        run_next(*out)
+                    except ReRunDialog:
+                        # restore state, and then let the loop re-run next
+                        wizard.go_back(rerun_previous=False)
+                    else:
+                        break
+            except GoBack as e:
+                # to go back from the next dialog, we ask the wizard to restore state
+                wizard.go_back(rerun_previous=False)
+                # and we re-run the current dialog
+                if wizard.can_go_back():
+                    # also rerun any calculations that might have populated the inputs to the current dialog,
+                    # by going back to just after the *previous* dialog finished
+                    raise ReRunDialog() from e
+                else:
+                    continue
+            else:
+                break
     return func_wrapper
 
 
@@ -115,12 +145,13 @@ class InstallWizard(QDialog, MessageBoxMixin, BaseWizard):
 
     accept_signal = pyqtSignal()
 
-    def __init__(self, config, app, plugins):
+    def __init__(self, config: 'SimpleConfig', app: QApplication, plugins: 'Plugins', *, gui_object: 'ElectrumGui'):
         QDialog.__init__(self, None)
         BaseWizard.__init__(self, config, plugins)
-        self.setWindowTitle('Electrum  -  ' + _('Install Wizard'))
+        self.setWindowTitle('Actilectrum  -  ' + _('Install Wizard'))
         self.app = app
         self.config = config
+        self.gui_thread = gui_object.gui_thread
         self.setMinimumSize(600, 400)
         self.accept_signal.connect(self.accept)
         self.title = QLabel()
@@ -170,57 +201,73 @@ class InstallWizard(QDialog, MessageBoxMixin, BaseWizard):
         vbox = QVBoxLayout()
         hbox = QHBoxLayout()
         hbox.addWidget(QLabel(_('Wallet') + ':'))
-        self.name_e = QLineEdit()
-        hbox.addWidget(self.name_e)
+        name_e = QLineEdit()
+        hbox.addWidget(name_e)
         button = QPushButton(_('Choose...'))
         hbox.addWidget(button)
         vbox.addLayout(hbox)
 
-        self.msg_label = QLabel('')
-        vbox.addWidget(self.msg_label)
+        msg_label = WWLabel('')
+        vbox.addWidget(msg_label)
         hbox2 = QHBoxLayout()
-        self.pw_e = QLineEdit('', self)
-        self.pw_e.setFixedWidth(150)
-        self.pw_e.setEchoMode(2)
-        self.pw_label = QLabel(_('Password') + ':')
-        hbox2.addWidget(self.pw_label)
-        hbox2.addWidget(self.pw_e)
+        pw_e = PasswordLineEdit('', self)
+        pw_e.setFixedWidth(17 * char_width_in_lineedit())
+        pw_label = QLabel(_('Password') + ':')
+        hbox2.addWidget(pw_label)
+        hbox2.addWidget(pw_e)
         hbox2.addStretch()
         vbox.addLayout(hbox2)
+
+        vbox.addSpacing(50)
+        vbox_create_new = QVBoxLayout()
+        vbox_create_new.addWidget(QLabel(_('Alternatively') + ':'), alignment=Qt.AlignLeft)
+        button_create_new = QPushButton(_('Create New Wallet'))
+        button_create_new.setMinimumWidth(120)
+        vbox_create_new.addWidget(button_create_new, alignment=Qt.AlignLeft)
+        widget_create_new = QWidget()
+        widget_create_new.setLayout(vbox_create_new)
+        vbox_create_new.setContentsMargins(0, 0, 0, 0)
+        vbox.addWidget(widget_create_new)
+
         self.set_layout(vbox, title=_('Actilectrum wallet'))
 
-        self.temp_storage = WalletStorage(path, manual_upgrades=True)
-        wallet_folder = os.path.dirname(self.temp_storage.path)
+        temp_storage = None  # type: Optional[WalletStorage]
+        wallet_folder = os.path.dirname(path)
 
         def on_choose():
             path, __ = QFileDialog.getOpenFileName(self, "Select your wallet file", wallet_folder)
             if path:
-                self.name_e.setText(path)
+                name_e.setText(path)
 
         def on_filename(filename):
+            # FIXME? "filename" might contain ".." (etc) and hence sketchy path traversals are possible
+            nonlocal temp_storage
+            temp_storage = None
+            msg = None
             path = os.path.join(wallet_folder, filename)
             wallet_from_memory = get_wallet_from_daemon(path)
             try:
                 if wallet_from_memory:
-                    self.temp_storage = wallet_from_memory.storage
+                    temp_storage = wallet_from_memory.storage  # type: Optional[WalletStorage]
                 else:
-                    self.temp_storage = WalletStorage(path, manual_upgrades=True)
-                self.next_button.setEnabled(True)
-            except BaseException:
+                    temp_storage = WalletStorage(path)
+            except (StorageReadWriteError, WalletFileException) as e:
+                msg = _('Cannot read file') + f'\n{repr(e)}'
+            except Exception as e:
                 self.logger.exception('')
-                self.temp_storage = None
-                self.next_button.setEnabled(False)
+                msg = _('Cannot read file') + f'\n{repr(e)}'
+            self.next_button.setEnabled(temp_storage is not None)
             user_needs_to_enter_password = False
-            if self.temp_storage:
-                if not self.temp_storage.file_exists():
+            if temp_storage:
+                if not temp_storage.file_exists():
                     msg =_("This file does not exist.") + '\n' \
                           + _("Press 'Next' to create this wallet, or choose another file.")
                 elif not wallet_from_memory:
-                    if self.temp_storage.is_encrypted_with_user_pw():
+                    if temp_storage.is_encrypted_with_user_pw():
                         msg = _("This file is encrypted with a password.") + '\n' \
                               + _('Enter your password or choose another file.')
                         user_needs_to_enter_password = True
-                    elif self.temp_storage.is_encrypted_with_hw_device():
+                    elif temp_storage.is_encrypted_with_hw_device():
                         msg = _("This file is encrypted using a hardware device.") + '\n' \
                               + _("Press 'Next' to choose device to decrypt.")
                     else:
@@ -228,85 +275,101 @@ class InstallWizard(QDialog, MessageBoxMixin, BaseWizard):
                 else:
                     msg = _("This file is already open in memory.") + "\n" \
                         + _("Press 'Next' to create/focus window.")
-            else:
+            if msg is None:
                 msg = _('Cannot read file')
-            self.msg_label.setText(msg)
+            msg_label.setText(msg)
+            widget_create_new.setVisible(bool(temp_storage and temp_storage.file_exists()))
             if user_needs_to_enter_password:
-                self.pw_label.show()
-                self.pw_e.show()
-                self.pw_e.setFocus()
+                pw_label.show()
+                pw_e.show()
+                pw_e.setFocus()
             else:
-                self.pw_label.hide()
-                self.pw_e.hide()
+                pw_label.hide()
+                pw_e.hide()
 
         button.clicked.connect(on_choose)
-        self.name_e.textChanged.connect(on_filename)
-        n = os.path.basename(self.temp_storage.path)
-        self.name_e.setText(n)
+        button_create_new.clicked.connect(
+            partial(
+                name_e.setText,
+                get_new_wallet_name(wallet_folder)))
+        name_e.textChanged.connect(on_filename)
+        name_e.setText(os.path.basename(path))
 
-        while True:
-            if self.loop.exec_() != 2:  # 2 = next
-                raise UserCancelled
-            if self.temp_storage.file_exists() and not self.temp_storage.is_encrypted():
-                break
-            if not self.temp_storage.file_exists():
-                break
-            wallet_from_memory = get_wallet_from_daemon(self.temp_storage.path)
-            if wallet_from_memory:
-                raise WalletAlreadyOpenInMemory(wallet_from_memory)
-            if self.temp_storage.file_exists() and self.temp_storage.is_encrypted():
-                if self.temp_storage.is_encrypted_with_user_pw():
-                    password = self.pw_e.text()
-                    try:
-                        self.temp_storage.decrypt(password)
-                        break
-                    except InvalidPassword as e:
-                        self.show_message(title=_('Error'), msg=str(e))
-                        continue
-                    except BaseException as e:
-                        self.logger.exception('')
-                        self.show_message(title=_('Error'), msg=str(e))
-                        raise UserCancelled()
-                elif self.temp_storage.is_encrypted_with_hw_device():
-                    try:
-                        self.run('choose_hw_device', HWD_SETUP_DECRYPT_WALLET, storage=self.temp_storage)
-                    except InvalidPassword as e:
-                        self.show_message(title=_('Error'),
-                                          msg=_('Failed to decrypt using this hardware device.') + '\n' +
-                                              _('If you use a passphrase, make sure it is correct.'))
-                        self.reset_stack()
-                        return self.select_storage(path, get_wallet_from_daemon)
-                    except BaseException as e:
-                        self.logger.exception('')
-                        self.show_message(title=_('Error'), msg=str(e))
-                        raise UserCancelled()
-                    if self.temp_storage.is_past_initial_decryption():
-                        break
+        def run_user_interaction_loop():
+            while True:
+                if self.loop.exec_() != 2:  # 2 = next
+                    raise UserCancelled
+                assert temp_storage
+                if temp_storage.file_exists() and not temp_storage.is_encrypted():
+                    break
+                if not temp_storage.file_exists():
+                    break
+                wallet_from_memory = get_wallet_from_daemon(temp_storage.path)
+                if wallet_from_memory:
+                    raise WalletAlreadyOpenInMemory(wallet_from_memory)
+                if temp_storage.file_exists() and temp_storage.is_encrypted():
+                    if temp_storage.is_encrypted_with_user_pw():
+                        password = pw_e.text()
+                        try:
+                            temp_storage.decrypt(password)
+                            break
+                        except InvalidPassword as e:
+                            self.show_message(title=_('Error'), msg=str(e))
+                            continue
+                        except BaseException as e:
+                            self.logger.exception('')
+                            self.show_message(title=_('Error'), msg=repr(e))
+                            raise UserCancelled()
+                    elif temp_storage.is_encrypted_with_hw_device():
+                        try:
+                            self.run('choose_hw_device', HWD_SETUP_DECRYPT_WALLET, storage=temp_storage)
+                        except InvalidPassword as e:
+                            self.show_message(title=_('Error'),
+                                              msg=_('Failed to decrypt using this hardware device.') + '\n' +
+                                                  _('If you use a passphrase, make sure it is correct.'))
+                            self.reset_stack()
+                            return self.select_storage(path, get_wallet_from_daemon)
+                        except (UserCancelled, GoBack):
+                            raise
+                        except BaseException as e:
+                            self.logger.exception('')
+                            self.show_message(title=_('Error'), msg=repr(e))
+                            raise UserCancelled()
+                        if temp_storage.is_past_initial_decryption():
+                            break
+                        else:
+                            raise UserCancelled()
                     else:
-                        raise UserCancelled()
-                else:
-                    raise Exception('Unexpected encryption version')
+                        raise Exception('Unexpected encryption version')
 
-        return self.temp_storage.path, (self.temp_storage if self.temp_storage.file_exists() else None)  #
+        try:
+            run_user_interaction_loop()
+        finally:
+            try:
+                pw_e.clear()
+            except RuntimeError:  # wrapped C/C++ object has been deleted.
+                pass              # happens when decrypting with hw device
 
-    def run_upgrades(self, storage):
+        return temp_storage.path, (temp_storage if temp_storage.file_exists() else None)
+
+    def run_upgrades(self, storage: WalletStorage, db: 'WalletDB') -> None:
         path = storage.path
-        if storage.requires_split():
+        if db.requires_split():
             self.hide()
             msg = _("The wallet '{}' contains multiple accounts, which are no longer supported since Actilectrum 2.7.\n\n"
                     "Do you want to split your wallet into multiple files?").format(path)
             if not self.question(msg):
                 return
-            file_list = '\n'.join(storage.split_accounts())
-            msg = _('Your accounts have been moved to') + ':\n' + file_list + '\n\n'+ _('Do you want to delete the old file') + ':\n' + path
+            file_list = db.split_accounts(path)
+            msg = _('Your accounts have been moved to') + ':\n' + '\n'.join(file_list) + '\n\n'+ _('Do you want to delete the old file') + ':\n' + path
             if self.question(msg):
                 os.remove(path)
                 self.show_warning(_('The file was removed'))
             # raise now, to avoid having the old storage opened
             raise UserCancelled()
 
-        action = storage.get_action()
-        if action and storage.requires_upgrade():
+        action = db.get_action()
+        if action and db.requires_upgrade():
             raise WalletFileException('Incomplete wallet files cannot be upgraded.')
         if action:
             self.hide()
@@ -318,19 +381,15 @@ class InstallWizard(QDialog, MessageBoxMixin, BaseWizard):
                     self.show_warning(_('The file was removed'))
                 return
             self.show()
-            self.data = storage.db.data # FIXME
+            self.data = json.loads(storage.read())
             self.run(action)
             for k, v in self.data.items():
-                storage.put(k, v)
-            storage.write()
+                db.put(k, v)
+            db.write(storage)
             return
 
-        if storage.requires_upgrade():
-            self.upgrade_storage(storage)
-
-    def finished(self):
-        """Called in hardware client wrapper, in order to close popups."""
-        return
+        if db.requires_upgrade():
+            self.upgrade_db(storage, db)
 
     def on_error(self, exc_info):
         if not isinstance(exc_info[1], UserCancelled):
@@ -446,8 +505,11 @@ class InstallWizard(QDialog, MessageBoxMixin, BaseWizard):
         playout = PasswordLayout(msg=msg, kind=kind, OK_button=self.next_button,
                                  force_disable_encrypt_cb=force_disable_encrypt_cb)
         playout.encrypt_cb.setChecked(True)
-        self.exec_layout(playout.layout())
-        return playout.new_password(), playout.encrypt_cb.isChecked()
+        try:
+            self.exec_layout(playout.layout())
+            return playout.new_password(), playout.encrypt_cb.isChecked()
+        finally:
+            playout.clear_password_fields()
 
     @wizard_dialog
     def request_password(self, run_next, force_disable_encrypt_cb=False):
@@ -499,6 +561,26 @@ class InstallWizard(QDialog, MessageBoxMixin, BaseWizard):
                 break
         if on_finished:
             on_finished()
+
+    def run_task_without_blocking_gui(self, task, *, msg=None):
+        assert self.gui_thread == threading.current_thread(), 'must be called from GUI thread'
+        if msg is None:
+            msg = _("Please wait...")
+
+        exc = None  # type: Optional[Exception]
+        res = None
+        def task_wrapper():
+            nonlocal exc
+            nonlocal res
+            try:
+                res = task()
+            except Exception as e:
+                exc = e
+        self.waiting_dialog(task_wrapper, msg=msg)
+        if exc is None:
+            return res
+        else:
+            raise exc
 
     @wizard_dialog
     def choice_dialog(self, title, message, choices, run_next):
@@ -634,18 +716,25 @@ class InstallWizard(QDialog, MessageBoxMixin, BaseWizard):
         def on_m(m):
             m_label.setText(_('Require {0} signatures').format(m))
             cw.set_m(m)
+            backup_warning_label.setVisible(cw.m != cw.n)
         def on_n(n):
             n_label.setText(_('From {0} cosigners').format(n))
             cw.set_n(n)
             m_edit.setMaximum(n)
+            backup_warning_label.setVisible(cw.m != cw.n)
         n_edit.valueChanged.connect(on_n)
         m_edit.valueChanged.connect(on_m)
-        on_n(2)
-        on_m(2)
         vbox = QVBoxLayout()
         vbox.addWidget(cw)
         vbox.addWidget(WWLabel(_("Choose the number of signatures needed to unlock funds in your wallet:")))
         vbox.addLayout(grid)
+        vbox.addSpacing(2 * char_width_in_lineedit())
+        backup_warning_label = WWLabel(_("Warning: to be able to restore a multisig wallet, "
+                                         "you should include the master public key for each cosigner "
+                                         "in all of your backups."))
+        vbox.addWidget(backup_warning_label)
+        on_n(2)
+        on_m(2)
         self.exec_layout(vbox, _("Multi-Signature Wallet"))
         m = int(m_edit.value())
         n = int(n_edit.value())
