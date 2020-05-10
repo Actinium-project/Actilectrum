@@ -1,6 +1,3 @@
-[submodule "contrib/CalinsQRReader"]
-	path = contrib/osx/CalinsQRReader
-	url = https://github.com/spesmilo/CalinsQRReader
 [submodule "actilectrum/www"]
 	path = actilectrum/www
 	url = https://github.com/Actinium-project/actilectrum-http.git
